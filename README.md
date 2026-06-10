@@ -26,6 +26,8 @@ Live: https://mackushev.github.io/metronome/ (moving to https://beat.js.org)
   as a green ring around the circle.
 - **Volume slider**, Space for start/stop, settings persisted in
   localStorage, responsive layout for phone, tablet, and desktop.
+- **Works offline**: a PWA service worker precaches the app after the
+  first visit; it can be installed to the home screen.
 
 ## Development
 
