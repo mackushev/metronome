@@ -134,6 +134,11 @@ body {
 
 /* --- Audio problem notice (mobile autoplay, iOS mute switch, no Web Audio) --- */
 
+/* display:flex would override the hidden attribute — keep it hidden explicitly */
+.audio-notice[hidden] {
+  display: none;
+}
+
 .audio-notice {
   display: flex;
   align-items: center;

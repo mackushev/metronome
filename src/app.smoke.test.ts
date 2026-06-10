@@ -128,6 +128,10 @@ describe('smoke: the app mounts', () => {
     }
   });
 
+  it('the audio notice is hidden by default', () => {
+    expect((document.getElementById('audio-notice') as HTMLElement).hidden).toBe(true);
+  });
+
   it('dial arrows nudge the tempo by ±1', () => {
     const hits = document.querySelectorAll('#circle .dial-arrow-hit');
     hits[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
