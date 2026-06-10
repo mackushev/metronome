@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('smoke: the app mounts', () => {
   beforeAll(async () => {
@@ -77,6 +77,22 @@ describe('smoke: the app mounts', () => {
     cells[2].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     cells = document.querySelectorAll('#beat-bar .beat-cell');
     expect(cells[2].classList.contains('accent')).toBe(true);
+  });
+
+  it('trainer inputs auto-apply after a typing pause', () => {
+    vi.useFakeTimers();
+    try {
+      const delta = document.getElementById('trainer-delta') as HTMLInputElement;
+      // an invalid value falls back to the previous one (30) on apply,
+      // which makes the auto-apply observable
+      delta.value = '0';
+      delta.dispatchEvent(new Event('input', { bubbles: true }));
+      expect(delta.value).toBe('0');
+      vi.advanceTimersByTime(2100);
+      expect(delta.value).toBe('30');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('dial arrows nudge the tempo by ±1', () => {

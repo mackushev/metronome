@@ -86,7 +86,9 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   volumeSlider.addEventListener('change', () => callbacks.onSoundPreview());
 
   // --- Speed trainer ---
+  let trainerApplyTimer: number | undefined;
   const updateTrainer = () => {
+    window.clearTimeout(trainerApplyTimer);
     const prev = store.get().trainer;
     const maxRaw = trainerMax.value.trim();
     store.update({
@@ -100,7 +102,12 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   };
   trainerEnabled.addEventListener('change', updateTrainer);
   for (const input of [trainerDelta, trainerStep, trainerMax]) {
+    // 'change' fires only on blur/Enter — also auto-apply after a typing pause
     input.addEventListener('change', updateTrainer);
+    input.addEventListener('input', () => {
+      window.clearTimeout(trainerApplyTimer);
+      trainerApplyTimer = window.setTimeout(updateTrainer, 2000);
+    });
   }
 
   // --- Reflect state back into the controls ---
