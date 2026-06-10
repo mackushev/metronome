@@ -29,9 +29,9 @@ describe('advance: tick grid', () => {
 describe('tickKind: accents and mutes', () => {
   const settings: Settings = {
     ...defaultSettings(),
-    beats: 3,
+    beats: 4,
     subdivision: 2,
-    beatStates: ['accent', 'mute', 'normal'],
+    beatStates: ['accent', 'mute', 'normal', 'tick'],
   };
 
   it('first beat is accented', () => {
@@ -47,6 +47,10 @@ describe('tickKind: accents and mutes', () => {
     expect(tickKind(settings, { beatIndex: 2, subIndex: 0 })).toBe('normal');
     expect(tickKind(settings, { beatIndex: 0, subIndex: 1 })).toBe('sub');
   });
+
+  it('a tick beat sounds like a regular subdivision tick', () => {
+    expect(tickKind(settings, { beatIndex: 3, subIndex: 0 })).toBe('sub');
+  });
 });
 
 describe('beat states', () => {
@@ -54,10 +58,11 @@ describe('beat states', () => {
     expect(defaultBeatStates(3)).toEqual(['accent', 'normal', 'normal']);
   });
 
-  it('cycle: normal → accent → mute → normal', () => {
+  it('cycle: normal → accent → mute → tick → normal', () => {
     expect(cycleBeatState('normal')).toBe('accent');
     expect(cycleBeatState('accent')).toBe('mute');
-    expect(cycleBeatState('mute')).toBe('normal');
+    expect(cycleBeatState('mute')).toBe('tick');
+    expect(cycleBeatState('tick')).toBe('normal');
   });
 
   it('resize keeps configured beats and appends normal ones', () => {

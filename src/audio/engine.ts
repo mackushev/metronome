@@ -22,6 +22,7 @@ export function tickKind(settings: Settings, pos: Position): TickKind | 'silent'
   if (pos.subIndex !== 0) return 'sub';
   const state = settings.beatStates[pos.beatIndex] ?? 'normal';
   if (state === 'mute') return 'silent';
+  if (state === 'tick') return 'sub';
   return state === 'accent' ? 'accent' : 'normal';
 }
 

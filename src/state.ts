@@ -1,4 +1,5 @@
-export type BeatState = 'normal' | 'accent' | 'mute';
+/** tick — the beat sounds like a regular subdivision tick */
+export type BeatState = 'normal' | 'accent' | 'mute' | 'tick';
 export type SoundName = 'click' | 'beep' | 'wood';
 
 export interface TrainerSettings {
@@ -56,6 +57,8 @@ export function cycleBeatState(state: BeatState): BeatState {
     case 'accent':
       return 'mute';
     case 'mute':
+      return 'tick';
+    case 'tick':
       return 'normal';
   }
 }
@@ -92,7 +95,7 @@ export function loadSettings(): Settings {
       volume:
         typeof parsed.volume === 'number' ? Math.min(1, Math.max(0, parsed.volume)) : fallback.volume,
       beatStates: resizeBeatStates(
-        states.map((s) => (s === 'accent' || s === 'mute' ? s : 'normal')),
+        states.map((s) => (s === 'accent' || s === 'mute' || s === 'tick' ? s : 'normal')),
         beats,
       ),
       trainer: { ...fallback.trainer, ...(parsed.trainer ?? {}), enabled: Boolean(parsed.trainer?.enabled) },

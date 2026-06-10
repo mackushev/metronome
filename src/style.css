@@ -91,6 +91,12 @@ body {
   height: 28%;
 }
 
+/* Sounds like a regular subdivision tick: low and dim, but filled */
+.beat-cell.tick {
+  background: var(--dim);
+  height: 40%;
+}
+
 .beat-cell.active {
   filter: brightness(1.7);
 }
@@ -262,6 +268,16 @@ body {
   stroke: var(--dim);
 }
 
+/* The beat sounds like a regular subdivision tick — drawn at the sub-dot size;
+   the wide transparent stroke keeps a finger-sized tap target */
+.dot-beat.tick {
+  r: 4.5;
+  fill: var(--dim);
+  stroke: transparent;
+  stroke-width: 16;
+  opacity: 0.85;
+}
+
 .dot.active {
   fill: var(--active);
 }
@@ -269,6 +285,11 @@ body {
 .dot-beat.mute.active {
   stroke: var(--active);
   fill: transparent;
+}
+
+.dot-beat.tick.active {
+  fill: var(--active);
+  stroke: transparent;
 }
 
 /* --- Circle center --- */
