@@ -1,4 +1,4 @@
-import type { Settings } from '../state';
+import { CLICK_VOLUME_FACTOR, type Settings } from '../state';
 import { scheduleSound, type TickKind } from './sounds';
 
 export interface Position {
@@ -100,12 +100,13 @@ export class MetronomeEngine {
     this.running ? this.stop() : this.start();
   }
 
-  /** One-off click outside the main loop (for sound/volume preview) */
-  preview(): void {
+  /** One-off click outside the main loop (for sound/volume/balance preview) */
+  preview(kind: TickKind = 'normal'): void {
     const ctx = this.ensureContext();
     void ctx.resume();
-    this.master!.gain.value = this.getSettings().volume;
-    scheduleSound(ctx, this.master!, this.getSettings().sound, 'normal', ctx.currentTime + 0.02);
+    const s = this.getSettings();
+    this.master!.gain.value = s.volume;
+    scheduleSound(ctx, this.master!, s.sound, kind, ctx.currentTime + 0.02, CLICK_VOLUME_FACTOR[s.clickVolume]);
   }
 
   /**
@@ -141,7 +142,9 @@ export class MetronomeEngine {
       const interval = 60 / this.getSettings().bpm / s.subdivision;
       const kind = tickKind(this.getSettings(), this.pos);
       this.master!.gain.value = s.volume;
-      if (kind !== 'silent') scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime);
+      if (kind !== 'silent') {
+        scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime, CLICK_VOLUME_FACTOR[s.clickVolume]);
+      }
 
       this.scheduled.push({ ...this.pos, time: this.nextTime, intervalSec: interval });
       this.pos = advance(this.pos, s.beats, s.subdivision);

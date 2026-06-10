@@ -58,11 +58,11 @@ describe('beat states', () => {
     expect(defaultBeatStates(3)).toEqual(['accent', 'normal', 'normal']);
   });
 
-  it('cycle: normal → accent → mute → tick → normal', () => {
+  it('cycle: normal → accent → tick → mute → normal', () => {
     expect(cycleBeatState('normal')).toBe('accent');
-    expect(cycleBeatState('accent')).toBe('mute');
-    expect(cycleBeatState('mute')).toBe('tick');
-    expect(cycleBeatState('tick')).toBe('normal');
+    expect(cycleBeatState('accent')).toBe('tick');
+    expect(cycleBeatState('tick')).toBe('mute');
+    expect(cycleBeatState('mute')).toBe('normal');
   });
 
   it('resize keeps configured beats and appends normal ones', () => {

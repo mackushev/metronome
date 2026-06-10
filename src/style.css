@@ -474,6 +474,57 @@ body {
   font-size: 15px;
 }
 
+/* --- Clicks vs beats balance: a beat dot + a click dot of growing size --- */
+
+.balance-label {
+  color: var(--dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 12px 0 8px;
+}
+
+.balance-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.bal-dot {
+  border-radius: 50%;
+  background: var(--dim);
+}
+
+.bal-beat {
+  width: 14px;
+  height: 14px;
+  background: var(--beat);
+}
+
+.bal-soft {
+  width: 5px;
+  height: 5px;
+}
+
+.bal-medium {
+  width: 9px;
+  height: 9px;
+}
+
+.bal-equal {
+  width: 14px;
+  height: 14px;
+}
+
+.balance-btn.selected .bal-dot {
+  background: var(--accent);
+}
+
+.balance-btn.selected .bal-beat {
+  background: var(--beat);
+}
+
 .group-volume input[type='range'] {
   flex: 1;
   accent-color: var(--accent);

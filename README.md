@@ -14,12 +14,13 @@ Live: https://mackushev.github.io/metronome/
 - **Beats per measure** 1–8 and **clicks per beat** 1–8: outer arcs of dots
   on the circle (beats on the right, clicks on the left) or panel controls.
 - **Accents and mutes**: tap a beat rectangle below the circle (or a beat
-  dot on the circle) to cycle normal → accent → mute.
+  dot on the circle) to cycle normal → accent → tick → mute.
 - **Beat bar** below the circle: one rectangle per beat — tall orange =
   accent, medium blue = normal, low outline = mute; the sounding beat
   lights up.
-- **3 click sounds** (click, beep, woodblock) synthesized on the fly —
-  no audio files.
+- **3 click sounds** (click, beep, cowbell) synthesized on the fly —
+  no audio files; a 3-position balance control sets how loud subdivision
+  clicks are relative to beats.
 - **Speed trainer**: every N seconds the tempo rises by M BPM (applied
   from the nearest beat), optionally up to a ceiling; progress is shown
   as a green ring around the circle.

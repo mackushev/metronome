@@ -10,6 +10,21 @@ describe('smoke: the app mounts', () => {
     if (!('requestAnimationFrame' in globalThis) || typeof requestAnimationFrame !== 'function') {
       (globalThis as Record<string, unknown>).requestAnimationFrame = () => 0;
     }
+    // jsdom has no Web Audio — a minimal stub so previews triggered by clicks do not throw
+    const audioParam = { value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {} };
+    (globalThis as Record<string, unknown>).AudioContext = class {
+      currentTime = 0;
+      destination = {};
+      resume() {
+        return Promise.resolve();
+      }
+      createGain() {
+        return { gain: { ...audioParam }, connect: () => this.destination };
+      }
+      createOscillator() {
+        return { type: '', frequency: { ...audioParam }, connect() {}, start() {}, stop() {} };
+      }
+    };
     await import('./main');
   });
 
@@ -52,6 +67,15 @@ describe('smoke: the app mounts', () => {
     expect(document.querySelector('#circle .dial-track')).not.toBeNull();
     expect(document.querySelector('#circle .dial-hit')).not.toBeNull();
     expect(document.querySelectorAll('#circle .dial-arrow').length).toBe(2);
+  });
+
+  it('clicks-vs-beats balance: 3 positions, soft selected by default', () => {
+    const btns = document.querySelectorAll<HTMLButtonElement>('#balance-seg .balance-btn');
+    expect(btns.length).toBe(3);
+    expect(btns[0].classList.contains('selected')).toBe(true);
+    btns[2].click();
+    expect(btns[2].classList.contains('selected')).toBe(true);
+    expect(btns[0].classList.contains('selected')).toBe(false);
   });
 
   it('the volume slider is bound to the settings', () => {

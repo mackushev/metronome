@@ -5,57 +5,68 @@ export type TickKind = 'accent' | 'normal' | 'sub';
 interface Voice {
   type: OscillatorType;
   freq: Record<TickKind, number>;
-  gain: Record<TickKind, number>;
+  /** Peak gain for beats; subdivision gain = normal × subLevel */
+  gain: Record<'accent' | 'normal', number>;
   /** Decay duration, seconds */
   decay: number;
-  /** How far the frequency drops by the end of the click (woodblock effect) */
+  /** How far the frequency drops by the end of the click */
   pitchDrop?: number;
+  /** A second detuned oscillator at freq × ratio (the classic cowbell recipe) */
+  secondRatio?: number;
 }
 
 const VOICES: Record<SoundName, Voice> = {
   click: {
     type: 'square',
     freq: { accent: 1800, normal: 1150, sub: 880 },
-    gain: { accent: 0.9, normal: 0.6, sub: 0.28 },
+    gain: { accent: 0.9, normal: 0.6 },
     decay: 0.03,
   },
   beep: {
     type: 'sine',
     freq: { accent: 1320, normal: 880, sub: 660 },
-    gain: { accent: 0.9, normal: 0.65, sub: 0.3 },
+    gain: { accent: 0.9, normal: 0.65 },
     decay: 0.07,
   },
-  wood: {
-    type: 'triangle',
-    freq: { accent: 1100, normal: 760, sub: 580 },
-    gain: { accent: 1.0, normal: 0.7, sub: 0.32 },
-    decay: 0.09,
-    pitchDrop: 0.45,
+  cowbell: {
+    type: 'square',
+    freq: { accent: 660, normal: 540, sub: 440 },
+    gain: { accent: 0.7, normal: 0.5 },
+    decay: 0.13,
+    secondRatio: 1.48,
   },
 };
 
-/** Schedules a single metronome click at the exact audio time `time` */
+/**
+ * Schedules a single metronome click at the exact audio time `time`.
+ * `subLevel` scales subdivision clicks relative to a normal beat (0..1).
+ */
 export function scheduleSound(
   ctx: AudioContext,
   dest: AudioNode,
   sound: SoundName,
   kind: TickKind,
   time: number,
+  subLevel = 0.45,
 ): void {
   const voice = VOICES[sound];
-  const osc = ctx.createOscillator();
+  const peak = kind === 'sub' ? voice.gain.normal * subLevel : voice.gain[kind];
+  const freq = voice.freq[kind];
   const gain = ctx.createGain();
-
-  osc.type = voice.type;
-  osc.frequency.setValueAtTime(voice.freq[kind], time);
-  if (voice.pitchDrop) {
-    osc.frequency.exponentialRampToValueAtTime(voice.freq[kind] * voice.pitchDrop, time + voice.decay);
-  }
-
-  gain.gain.setValueAtTime(voice.gain[kind], time);
+  gain.gain.setValueAtTime(peak, time);
   gain.gain.exponentialRampToValueAtTime(0.001, time + voice.decay);
+  gain.connect(dest);
 
-  osc.connect(gain).connect(dest);
-  osc.start(time);
-  osc.stop(time + voice.decay + 0.01);
+  const ratios = voice.secondRatio ? [1, voice.secondRatio] : [1];
+  for (const ratio of ratios) {
+    const osc = ctx.createOscillator();
+    osc.type = voice.type;
+    osc.frequency.setValueAtTime(freq * ratio, time);
+    if (voice.pitchDrop) {
+      osc.frequency.exponentialRampToValueAtTime(freq * ratio * voice.pitchDrop, time + voice.decay);
+    }
+    osc.connect(gain);
+    osc.start(time);
+    osc.stop(time + voice.decay + 0.01);
+  }
 }

@@ -51,8 +51,8 @@ metronome/
    a 25 ms `setInterval` schedules all ticks ~120 ms ahead against the precise
    `audioContext.currentTime` clock. The queue of scheduled ticks drives the
    UI highlight via `requestAnimationFrame`.
-2. **Synthesized sounds** — square click, sine beep, triangle woodblock with
-   a pitch drop; accented beats are higher and louder, muted ones are silent.
+2. **Synthesized sounds** — square click, sine beep, two-oscillator cowbell;
+   accented beats are higher and louder, muted ones are silent.
 3. **Circle** — beat dots (large) and subdivision dots (small) around the ring,
    a sweeping needle, tap on a beat dot cycles accent/normal/mute. Outer arcs
    select beats per measure (right) and clicks per beat (left). A rotary dial

@@ -7,9 +7,17 @@ import {
   SUBDIVISIONS,
   clampBpm,
   resizeBeatStates,
+  type ClickVolume,
   type SoundName,
   type Store,
 } from '../state';
+
+/** Balance positions: beat dot + click dot of growing size */
+const CLICK_VOLUMES: { value: ClickVolume; title: string }[] = [
+  { value: 'soft', title: 'Clicks quiet' },
+  { value: 'medium', title: 'Clicks medium' },
+  { value: 'equal', title: 'Clicks as loud as beats' },
+];
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -18,7 +26,7 @@ function byId<T extends HTMLElement>(id: string): T {
 export interface ControlsCallbacks {
   /** BPM changed by the user (not by the trainer) */
   onUserBpmChange: (bpm: number) => void;
-  onSoundPreview: () => void;
+  onSoundPreview: (kind?: 'normal' | 'sub') => void;
 }
 
 /** Binds the static settings panel markup to the store */
@@ -27,6 +35,7 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   const beatsValue = byId<HTMLSpanElement>('beats-value');
   const subdivSeg = byId<HTMLDivElement>('subdiv-seg');
   const soundSeg = byId<HTMLDivElement>('sound-seg');
+  const balanceSeg = byId<HTMLDivElement>('balance-seg');
   const volumeSlider = byId<HTMLInputElement>('volume-slider');
   const trainerEnabled = byId<HTMLInputElement>('trainer-enabled');
   const trainerDelta = byId<HTMLInputElement>('trainer-delta');
@@ -78,6 +87,23 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
     soundSeg.append(btn);
   }
 
+  // --- Clicks vs beats balance ---
+  for (const { value, title } of CLICK_VOLUMES) {
+    const btn = document.createElement('button');
+    btn.className = 'btn seg-btn balance-btn';
+    btn.title = title;
+    btn.setAttribute('aria-label', title);
+    btn.dataset.value = value;
+    // Pictogram: a beat dot and a click dot whose size matches the position
+    btn.innerHTML = `<i class="bal-dot bal-beat"></i><i class="bal-dot bal-click bal-${value}"></i>`;
+    btn.addEventListener('click', () => {
+      store.update({ clickVolume: value });
+      // Preview the subdivision click so the chosen level is audible
+      callbacks.onSoundPreview('sub');
+    });
+    balanceSeg.append(btn);
+  }
+
   // --- Volume ---
   volumeSlider.addEventListener('input', () => {
     store.update({ volume: Number(volumeSlider.value) / 100 });
@@ -120,6 +146,9 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
     }
     for (const btn of soundSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
       btn.classList.toggle('selected', (btn.dataset.value as SoundName) === s.sound);
+    }
+    for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
+      btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
     }
     volumeSlider.value = String(Math.round(s.volume * 100));
     trainerEnabled.checked = s.trainer.enabled;
