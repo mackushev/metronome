@@ -4,7 +4,7 @@ A browser-only metronome with no backend: a circular UI with beat dots
 (inspired by RhythmBot), precise sound via the Web Audio API, and a speed
 trainer that gradually raises the tempo.
 
-Live: https://beat.js.org
+Live: https://mackushev.github.io/metronome/ (moving to https://beat.js.org)
 
 ## Features
 
