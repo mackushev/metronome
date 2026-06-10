@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#14161c" />
+    <title>Metronome</title>
+  </head>
+  <body>
+    <div id="app">
+      <main class="layout">
+        <section class="circle-col">
+          <div class="circle-wrap">
+          <svg id="circle" viewBox="0 0 360 360" aria-hidden="true"></svg>
+          <div class="center" id="center">
+            <div class="bpm-value" id="bpm-value">120</div>
+            <div class="bpm-label">BPM</div>
+            <button id="play" class="play-btn" aria-label="Start / stop">
+              <span class="icon-play">▶</span>
+            </button>
+          </div>
+          </div>
+          <div class="beat-bar" id="beat-bar" aria-label="Beats of the measure"></div>
+        </section>
+
+        <section class="controls">
+          <div class="control-group group-tempo">
+            <div class="group-label">Tempo</div>
+            <div class="row tempo-row">
+              <button class="btn" data-bpm-delta="-5">−5</button>
+              <button class="btn" data-bpm-delta="-1">−1</button>
+              <input type="range" id="bpm-slider" min="20" max="300" step="1" aria-label="Tempo, BPM" />
+              <button class="btn" data-bpm-delta="1">+1</button>
+              <button class="btn" data-bpm-delta="5">+5</button>
+            </div>
+          </div>
+
+          <div class="control-group group-beats">
+            <div class="group-label">Beats per measure</div>
+            <div class="row stepper">
+              <button class="btn" id="beats-dec" aria-label="Fewer beats">−</button>
+              <span class="stepper-value" id="beats-value">4</span>
+              <button class="btn" id="beats-inc" aria-label="More beats">+</button>
+            </div>
+          </div>
+
+          <div class="control-group group-subdiv">
+            <div class="group-label">Clicks per beat</div>
+            <div class="row seg" id="subdiv-seg"></div>
+          </div>
+
+          <div class="control-group group-sound">
+            <div class="group-label">Sound</div>
+            <div class="row seg" id="sound-seg"></div>
+          </div>
+
+          <div class="control-group trainer">
+            <label class="toggle">
+              <input type="checkbox" id="trainer-enabled" />
+              <span>Speed trainer</span>
+            </label>
+            <div class="trainer-fields" id="trainer-fields">
+              <label>every
+                <input type="number" id="trainer-delta" min="2" max="600" step="1" /> s
+              </label>
+              <label>add
+                <input type="number" id="trainer-step" min="1" max="60" step="1" /> BPM
+              </label>
+              <label>up to
+                <input type="number" id="trainer-max" min="20" max="300" step="1" placeholder="∞" /> BPM
+              </label>
+              <div class="trainer-status" id="trainer-status"></div>
+            </div>
+          </div>
+
+          <div class="control-group group-volume">
+            <div class="group-label">Volume</div>
+            <div class="row">
+              <span class="volume-icon">🔈</span>
+              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
+              <span class="volume-icon">🔊</span>
+            </div>
+          </div>
+
+          <p class="hint">
+            Space — start/stop. Tap a beat rectangle below the circle
+            (or a dot on the circle): normal → accent → mute.
+            Tempo: spin the ring around the play button (clockwise — faster,
+            one turn = 60 BPM), tap the arrows on the sides of the ring (±1),
+            or drag the circle center up/down. Outer arcs: right — beats
+            per measure, left — clicks per beat.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,535 @@
+:root {
+  --bg: #14161c;
+  --panel: #1d212b;
+  --panel-border: #2a3040;
+  --text: #e8eaf0;
+  --dim: #8a90a0;
+  --accent: #f5a524;
+  --beat: #4da3ff;
+  --active: #ffffff;
+  --trainer: #38c172;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* --- Circle --- */
+
+.circle-col {
+  width: min(92vw, 440px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.circle-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+/* --- Beat bar below the circle --- */
+
+.beat-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 44px;
+  padding: 0 6px;
+}
+
+.beat-cell {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  transition: height 0.12s, background 0.12s, filter 0.12s;
+}
+
+.beat-cell.normal {
+  background: var(--beat);
+  height: 62%;
+}
+
+.beat-cell.accent {
+  background: var(--accent);
+  height: 100%;
+}
+
+.beat-cell.mute {
+  background: transparent;
+  border: 2px solid var(--panel-border);
+  height: 28%;
+}
+
+.beat-cell.active {
+  filter: brightness(1.7);
+}
+
+.beat-cell.mute.active {
+  border-color: var(--dim);
+}
+
+#circle {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.base-ring {
+  fill: none;
+  stroke: var(--panel-border);
+  stroke-width: 2;
+}
+
+.trainer-ring {
+  fill: none;
+  stroke: var(--trainer);
+  stroke-width: 4;
+  stroke-linecap: round;
+  opacity: 0.85;
+  transition: stroke-dashoffset 0.15s linear;
+}
+
+.needle {
+  stroke: var(--dim);
+  stroke-width: 2;
+  opacity: 0.55;
+}
+
+/* --- Outer selector dots: beats on the right, clicks per beat on the left --- */
+
+.sel-dot {
+  fill: transparent;
+  stroke: var(--panel-border);
+  stroke-width: 2;
+  transition: fill 0.1s, stroke 0.1s;
+}
+
+.sel-dot.filled.sel-beats {
+  fill: var(--beat);
+  stroke: var(--beat);
+}
+
+.sel-dot.filled.sel-subdiv {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.sel-dot.current {
+  stroke: var(--text);
+}
+
+.sel-num {
+  font-size: 7.5px;
+  fill: var(--dim);
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sel-num.filled {
+  fill: var(--bg);
+  font-weight: 700;
+}
+
+.sel-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+/* Sector backdrops: show which arc is about beats and which about clicks */
+.sel-band {
+  fill: none;
+  stroke-width: 18;
+  stroke-linecap: round;
+  opacity: 0.13;
+}
+
+.sel-band.band-beats {
+  stroke: var(--beat);
+}
+
+.sel-band.band-subdiv {
+  stroke: var(--accent);
+}
+
+.sel-zone-label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sel-zone-label.band-beats {
+  fill: var(--beat);
+}
+
+.sel-zone-label.band-subdiv {
+  fill: var(--accent);
+}
+
+/* --- Tempo dial --- */
+
+.dial-track {
+  fill: none;
+  stroke: var(--panel-border);
+  stroke-width: 3;
+}
+
+/* Invisible wide finger-sized grab zone */
+.dial-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 30;
+  cursor: grab;
+  touch-action: none;
+}
+
+/* ±1 BPM arrows on the sides of the dial */
+.dial-arrow {
+  fill: none;
+  stroke: var(--dim);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.dial-arrow-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.dot {
+  transition: fill 0.1s, r 0.1s;
+}
+
+.dot-sub {
+  fill: var(--dim);
+  opacity: 0.6;
+}
+
+.dot-beat {
+  cursor: pointer;
+  stroke-width: 2.5;
+}
+
+.dot-beat.normal {
+  fill: var(--beat);
+  stroke: transparent;
+}
+
+.dot-beat.accent {
+  fill: var(--accent);
+  stroke: var(--accent);
+  r: 14;
+}
+
+.dot-beat.mute {
+  fill: transparent;
+  stroke: var(--dim);
+}
+
+.dot.active {
+  fill: var(--active);
+}
+
+.dot-beat.mute.active {
+  stroke: var(--active);
+  fill: transparent;
+}
+
+/* --- Circle center --- */
+
+.center {
+  position: absolute;
+  /* The overlay radius must stay below the tempo dial (r=100 of 180),
+     otherwise it intercepts taps on the dial and the arrows */
+  inset: 28.5%;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: ns-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.bpm-value {
+  font-size: clamp(44px, 12vw, 64px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.bpm-label {
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+.play-btn {
+  margin-top: 10px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #14161c;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.08s, background 0.15s;
+}
+
+.play-btn:active {
+  transform: scale(0.94);
+}
+
+.play-btn.playing {
+  background: var(--beat);
+}
+
+/* --- Settings panel --- */
+
+.controls {
+  width: min(92vw, 440px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.control-group {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.group-label {
+  color: var(--dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.btn:active {
+  background: var(--panel-border);
+}
+
+.seg {
+  flex-wrap: wrap;
+}
+
+.seg-btn {
+  flex: 1;
+}
+
+.seg-btn.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  color: var(--accent);
+}
+
+.tempo-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+  min-width: 60px;
+}
+
+.stepper {
+  justify-content: center;
+}
+
+.stepper-value {
+  min-width: 56px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Speed trainer --- */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--trainer);
+}
+
+.trainer-fields {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  color: var(--dim);
+  font-size: 14px;
+}
+
+.trainer-fields.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.trainer-fields label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trainer-fields input[type='number'] {
+  width: 64px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.group-volume input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.volume-icon {
+  font-size: 14px;
+}
+
+.trainer-status {
+  width: 100%;
+  color: var(--trainer);
+  font-size: 14px;
+  min-height: 18px;
+}
+
+.hint {
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* --- Narrow layout: tempo/beats/clicks have on-circle counterparts,
+       so the trainer and sound stay below the circle, duplicates go to the bottom --- */
+
+@media (max-width: 819px) {
+  .control-group.trainer {
+    order: 1;
+  }
+
+  .group-sound {
+    order: 2;
+  }
+
+  .group-tempo {
+    order: 3;
+  }
+
+  .group-beats {
+    order: 4;
+  }
+
+  .group-subdiv {
+    order: 5;
+  }
+
+  .group-volume {
+    order: 6;
+  }
+
+  .hint {
+    order: 7;
+  }
+}
+
+/* --- Tablet and desktop: circle on the left, settings on the right --- */
+
+@media (min-width: 820px) {
+  #app {
+    padding: 32px;
+  }
+
+  .layout {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 40px;
+  }
+
+  .circle-col {
+    width: min(44vw, 480px);
+    position: sticky;
+    top: 32px;
+  }
+
+  .controls {
+    width: 360px;
+  }
+}
