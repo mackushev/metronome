@@ -24,6 +24,15 @@ describe('smoke: the app mounts', () => {
       createOscillator() {
         return { type: '', frequency: { ...audioParam }, connect() {}, start() {}, stop() {} };
       }
+      createBiquadFilter() {
+        return { type: '', frequency: { ...audioParam }, Q: { ...audioParam }, connect() {} };
+      }
+      createBuffer(_ch: number, len: number) {
+        return { getChannelData: () => new Float32Array(len) };
+      }
+      createBufferSource() {
+        return { buffer: null, connect: () => ({ connect() {} }), start() {} };
+      }
     };
     await import('./main');
   });

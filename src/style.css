@@ -1,13 +1,13 @@
 :root {
-  --bg: #14161c;
+  --bg: #101218;
   --panel: #1d212b;
-  --panel-border: #2a3040;
-  --text: #e8eaf0;
-  --dim: #8a90a0;
-  --accent: #f5a524;
-  --beat: #4da3ff;
+  --panel-border: #3a4358;
+  --text: #f4f6fa;
+  --dim: #a4abbd;
+  --accent: #ffb02e;
+  --beat: #5db1ff;
   --active: #ffffff;
-  --trainer: #38c172;
+  --trainer: #3fd67f;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -129,7 +129,7 @@ body {
 .needle {
   stroke: var(--dim);
   stroke-width: 2;
-  opacity: 0.55;
+  opacity: 0.8;
 }
 
 /* --- Outer selector dots: beats on the right, clicks per beat on the left --- */
@@ -178,7 +178,7 @@ body {
   fill: none;
   stroke-width: 18;
   stroke-linecap: round;
-  opacity: 0.13;
+  opacity: 0.22;
 }
 
 .sel-band.band-beats {
@@ -244,7 +244,7 @@ body {
 
 .dot-sub {
   fill: var(--dim);
-  opacity: 0.6;
+  opacity: 0.9;
 }
 
 .dot-beat {
