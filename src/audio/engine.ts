@@ -49,6 +49,9 @@ export class MetronomeEngine {
   /** Called when each beat is scheduled (used by the speed trainer) */
   onBeatScheduled: ((audioTime: number) => void) | null = null;
 
+  /** Called when audio cannot work: no Web Audio support or playback blocked */
+  onAudioIssue: ((issue: 'unsupported' | 'blocked') => void) | null = null;
+
   private readonly getSettings: () => Settings;
 
   constructor(getSettings: () => Settings) {
@@ -64,9 +67,24 @@ export class MetronomeEngine {
     return this.ctx ? this.ctx.currentTime : null;
   }
 
-  private ensureContext(): AudioContext {
+  /** True when the context exists and is actually producing audio */
+  audioRunning(): boolean {
+    return this.running && this.ctx !== null && this.ctx.state === 'running';
+  }
+
+  private ensureContext(): AudioContext | null {
     if (!this.ctx) {
-      this.ctx = new AudioContext();
+      // Older iOS Safari only exposes the webkit-prefixed constructor
+      const w = window as unknown as {
+        AudioContext?: typeof AudioContext;
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const Ctor = w.AudioContext ?? w.webkitAudioContext;
+      if (!Ctor) {
+        this.onAudioIssue?.('unsupported');
+        return null;
+      }
+      this.ctx = new Ctor();
       this.master = this.ctx.createGain();
       this.master.gain.value = this.getSettings().volume;
       this.master.connect(this.ctx.destination);
@@ -77,17 +95,27 @@ export class MetronomeEngine {
   start(): void {
     if (this.running) return;
     const ctx = this.ensureContext();
+    if (!ctx) return;
     this.pos = { beatIndex: 0, subIndex: 0 };
     this.scheduled = [];
     // The context clock may stand still until resume() completes — wait for it,
     // otherwise a burst of catch-up clicks piles up
     this.nextTime = Number.POSITIVE_INFINITY;
     this.timer = window.setInterval(() => this.schedule(), TIMER_MS);
-    void ctx.resume().then(() => {
-      if (!this.running) return;
-      this.nextTime = this.ctx!.currentTime + 0.08;
-      this.schedule();
-    });
+    void ctx
+      .resume()
+      .then(() => {
+        if (!this.running) return;
+        this.nextTime = this.ctx!.currentTime + 0.08;
+        this.schedule();
+      })
+      .catch(() => this.onAudioIssue?.('blocked'));
+    // Watchdog: autoplay policies may keep the context suspended without rejecting
+    window.setTimeout(() => {
+      if (this.running && this.ctx && this.ctx.state !== 'running') {
+        this.onAudioIssue?.('blocked');
+      }
+    }, 1500);
   }
 
   stop(): void {
@@ -103,7 +131,8 @@ export class MetronomeEngine {
   /** One-off click outside the main loop (for sound/volume/balance preview) */
   preview(kind: TickKind = 'normal'): void {
     const ctx = this.ensureContext();
-    void ctx.resume();
+    if (!ctx) return;
+    void ctx.resume().catch(() => {});
     const s = this.getSettings();
     this.master!.gain.value = s.volume;
     scheduleSound(ctx, this.master!, s.sound, kind, ctx.currentTime + 0.02, CLICK_VOLUME_FACTOR[s.clickVolume]);

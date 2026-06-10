@@ -132,6 +132,33 @@ body {
   opacity: 0.8;
 }
 
+/* --- Audio problem notice (mobile autoplay, iOS mute switch, no Web Audio) --- */
+
+.audio-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.audio-notice-close {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dim);
+  font-size: 14px;
+  cursor: pointer;
+}
+
 /* --- Outer selector dots: beats on the right, clicks per beat on the left --- */
 
 .sel-dot {

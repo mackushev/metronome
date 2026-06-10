@@ -32,6 +32,8 @@ const circle = new CircleView(svg, {
 const beatBar = new BeatBar(document.getElementById('beat-bar')!, toggleBeatState);
 
 const bpmValue = document.getElementById('bpm-value')!;
+const audioNotice = document.getElementById('audio-notice')!;
+const audioNoticeText = document.getElementById('audio-notice-text')!;
 const playBtn = document.getElementById('play') as HTMLButtonElement;
 const playIcon = playBtn.querySelector('.icon-play')!;
 const trainerStatus = document.getElementById('trainer-status')!;
@@ -56,6 +58,44 @@ engine.onBeatScheduled = (audioTime) => {
   if (target !== s.bpm) store.update({ bpm: target });
 };
 
+// --- Audio problem notices (mobile browsers, autoplay policies, iOS mute switch) ---
+let noticeSticky = false;
+
+function showAudioNotice(text: string, sticky: boolean): void {
+  audioNoticeText.textContent = text;
+  audioNotice.hidden = false;
+  noticeSticky = sticky;
+}
+
+document.getElementById('audio-notice-close')!.addEventListener('click', () => {
+  audioNotice.hidden = true;
+});
+
+engine.onAudioIssue = (issue) => {
+  showAudioNotice(
+    issue === 'unsupported'
+      ? 'This browser cannot play sound (no Web Audio support). Please use an up-to-date Chrome, Safari, Firefox, or Edge.'
+      : 'Audio did not start — the browser blocked playback. Tap play again; on iPhone/iPad also check the Silent Mode switch and the volume.',
+    true,
+  );
+};
+
+const isIOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1);
+const IOS_HINT_KEY = 'metronome-ios-hint-shown';
+
+function maybeShowIosHint(): void {
+  if (!isIOS) return;
+  try {
+    if (localStorage.getItem(IOS_HINT_KEY)) return;
+    localStorage.setItem(IOS_HINT_KEY, '1');
+  } catch {
+    return;
+  }
+  showAudioNotice('No sound? Flip the Silent Mode switch off and raise the volume.', false);
+}
+
 function setUserBpm(bpm: number): void {
   store.update({ bpm });
   // The user changed the tempo — the trainer restarts its countdown from the new value
@@ -73,6 +113,7 @@ function togglePlay(): void {
   resetTrainerBase();
   playIcon.textContent = engine.running ? '❚❚' : '▶';
   playBtn.classList.toggle('playing', engine.running);
+  if (engine.running) maybeShowIosHint();
 }
 
 playBtn.addEventListener('click', togglePlay);
@@ -122,6 +163,11 @@ function frame(): void {
   const pos = engine.position();
   circle.tick(pos);
   beatBar.setActive(pos ? pos.beatIndex : null);
+
+  // A sticky "audio blocked" notice disappears as soon as audio actually plays
+  if (noticeSticky && !audioNotice.hidden && engine.audioRunning()) {
+    audioNotice.hidden = true;
+  }
 
   const s = store.get();
   const time = engine.currentTime();
