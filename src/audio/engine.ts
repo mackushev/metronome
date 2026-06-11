@@ -35,6 +35,9 @@ interface ScheduledTick extends Position {
 
 const LOOKAHEAD_SEC = 0.12;
 const TIMER_MS = 25;
+/** A beat in the "tick" state plays the sub timbre at this fixed, audible level —
+    it must not fade away with the ghost-note balance setting */
+const TICK_BEAT_LEVEL = 0.5;
 
 /**
  * Lookahead scheduler ("A Tale of Two Clocks"): a cheap setInterval
@@ -174,7 +177,9 @@ export class MetronomeEngine {
       const kind = tickKind(this.getSettings(), this.pos);
       this.master!.gain.value = s.volume;
       if (kind !== 'silent') {
-        scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime, CLICK_VOLUME_FACTOR[s.clickVolume]);
+        const subLevel =
+          this.pos.subIndex === 0 ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
+        scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime, subLevel);
       }
 
       this.scheduled.push({ ...this.pos, time: this.nextTime, intervalSec: interval });
