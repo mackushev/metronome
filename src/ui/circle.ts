@@ -1,4 +1,4 @@
-import { BEATS_MAX, SUBDIVISIONS, type Settings } from '../state';
+import { BEATS_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW = 360;
@@ -84,8 +84,8 @@ export interface CircleCallbacks {
   onBeatsSelect: (beats: number) => void;
   /** Tap on an outer dot on the left: set the number of clicks per beat */
   onSubdivSelect: (subdivision: number) => void;
-  /** Tap on a subdivision dot: mute/unmute the ghost clicks */
-  onSubToggle: () => void;
+  /** Tap on a subdivision dot: mute/unmute that single ghost click */
+  onSubToggle: (beatIndex: number, subIndex: number) => void;
 }
 
 interface SelectorDot {
@@ -264,7 +264,7 @@ export class CircleView {
 
   /** Rebuilds the dots to match the current settings (call on every change) */
   render(settings: Settings): void {
-    const { beats, subdivision, beatStates, subMuted } = settings;
+    const { beats, subdivision, beatStates, mutedSubs } = settings;
     if (beats !== this.beats || subdivision !== this.subdivision) {
       this.rebuild(beats, subdivision);
     }
@@ -273,7 +273,8 @@ export class CircleView {
       if (i % subdivision === 0) {
         dot.setAttribute('class', `dot dot-beat ${beatStates[i / subdivision] ?? 'normal'}${active}`);
       } else {
-        dot.setAttribute('class', `dot dot-sub${subMuted ? ' muted' : ''}${active}`);
+        const muted = isSubMuted(mutedSubs, Math.floor(i / subdivision), i % subdivision);
+        dot.setAttribute('class', `dot dot-sub${muted ? ' muted' : ''}${active}`);
       }
     });
     this.renderSelector(this.selBeats, beats);
@@ -317,9 +318,11 @@ export class CircleView {
           this.callbacks.onBeatClick(beatIndex);
         });
       } else {
+        const beatIndex = Math.floor(i / subdivision);
+        const subIndex = i % subdivision;
         dot.addEventListener('pointerdown', (event) => {
           event.preventDefault();
-          this.callbacks.onSubToggle();
+          this.callbacks.onSubToggle(beatIndex, subIndex);
         });
       }
       this.svg.append(dot);

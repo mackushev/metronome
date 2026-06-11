@@ -5,6 +5,7 @@ import {
   defaultBeatStates,
   defaultSettings,
   resizeBeatStates,
+  toggleSubMute,
   type Settings,
 } from './state';
 import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
@@ -52,9 +53,10 @@ describe('tickKind: accents and mutes', () => {
     expect(tickKind(settings, { beatIndex: 3, subIndex: 0 })).toBe('sub');
   });
 
-  it('subMuted silences subdivisions but not beats (including tick beats)', () => {
-    const muted: Settings = { ...settings, subMuted: true };
+  it('a muted subdivision is silent individually; beats are unaffected', () => {
+    const muted: Settings = { ...settings, mutedSubs: ['0-1'] };
     expect(tickKind(muted, { beatIndex: 0, subIndex: 1 })).toBe('silent');
+    expect(tickKind(muted, { beatIndex: 1, subIndex: 1 })).toBe('sub');
     expect(tickKind(muted, { beatIndex: 0, subIndex: 0 })).toBe('accent');
     expect(tickKind(muted, { beatIndex: 3, subIndex: 0 })).toBe('sub');
   });
@@ -75,6 +77,13 @@ describe('beat states', () => {
   it('resize keeps configured beats and appends normal ones', () => {
     expect(resizeBeatStates(['accent', 'mute'], 4)).toEqual(['accent', 'mute', 'normal', 'normal']);
     expect(resizeBeatStates(['accent', 'mute', 'normal'], 2)).toEqual(['accent', 'mute']);
+  });
+});
+
+describe('toggleSubMute', () => {
+  it('toggles a single subdivision key on and off', () => {
+    expect(toggleSubMute([], 1, 2)).toEqual(['1-2']);
+    expect(toggleSubMute(['1-2', '0-1'], 1, 2)).toEqual(['0-1']);
   });
 });
 

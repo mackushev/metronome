@@ -1,6 +1,6 @@
 import './style.css';
 import { MetronomeEngine } from './audio/engine';
-import { clampBpm, loadSettings, resizeBeatStates, Store, cycleBeatState } from './state';
+import { clampBpm, loadSettings, resizeBeatStates, Store, cycleBeatState, toggleSubMute } from './state';
 import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
 import { BeatBar } from './ui/beatbar';
 import { CircleView } from './ui/circle';
@@ -27,7 +27,9 @@ const circle = new CircleView(svg, {
     store.update({ beats, beatStates: resizeBeatStates(store.get().beatStates, beats) });
   },
   onSubdivSelect: (subdivision) => store.update({ subdivision }),
-  onSubToggle: () => store.update({ subMuted: !store.get().subMuted }),
+  onSubToggle: (beatIndex, subIndex) => {
+    store.update({ mutedSubs: toggleSubMute(store.get().mutedSubs, beatIndex, subIndex) });
+  },
 });
 
 const beatBar = new BeatBar(document.getElementById('beat-bar')!, toggleBeatState);

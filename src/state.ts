@@ -25,8 +25,8 @@ export interface Settings {
   volume: number;
   /** Subdivision clicks vs beats loudness ratio */
   clickVolume: ClickVolume;
-  /** Subdivision (ghost) clicks muted entirely — toggled by tapping a sub dot */
-  subMuted: boolean;
+  /** Individually muted subdivision clicks, keys "beatIndex-subIndex" */
+  mutedSubs: string[];
   /** State of each beat in the measure, length = beats */
   beatStates: BeatState[];
   trainer: TrainerSettings;
@@ -64,6 +64,19 @@ export function resizeBeatStates(prev: BeatState[], beats: number): BeatState[] 
   return Array.from({ length: beats }, (_, i) => prev[i] ?? 'normal');
 }
 
+export function subKey(beatIndex: number, subIndex: number): string {
+  return `${beatIndex}-${subIndex}`;
+}
+
+export function isSubMuted(mutedSubs: string[], beatIndex: number, subIndex: number): boolean {
+  return mutedSubs.includes(subKey(beatIndex, subIndex));
+}
+
+export function toggleSubMute(mutedSubs: string[], beatIndex: number, subIndex: number): string[] {
+  const key = subKey(beatIndex, subIndex);
+  return mutedSubs.includes(key) ? mutedSubs.filter((k) => k !== key) : [...mutedSubs, key];
+}
+
 export function cycleBeatState(state: BeatState): BeatState {
   switch (state) {
     case 'normal':
@@ -85,7 +98,7 @@ export function defaultSettings(): Settings {
     sound: 'click',
     volume: 0.8,
     clickVolume: 'soft',
-    subMuted: false,
+    mutedSubs: [],
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, deltaSec: 30, stepBpm: 5, maxBpm: null },
   };
@@ -114,7 +127,9 @@ export function loadSettings(): Settings {
         parsed.clickVolume && parsed.clickVolume in CLICK_VOLUME_FACTOR
           ? parsed.clickVolume
           : fallback.clickVolume,
-      subMuted: Boolean(parsed.subMuted),
+      mutedSubs: Array.isArray(parsed.mutedSubs)
+        ? parsed.mutedSubs.filter((k): k is string => typeof k === 'string' && /^\d+-\d+$/.test(k))
+        : [],
       beatStates: resizeBeatStates(
         states.map((s) => (s === 'accent' || s === 'mute' || s === 'tick' ? s : 'normal')),
         beats,

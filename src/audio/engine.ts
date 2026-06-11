@@ -1,4 +1,4 @@
-import { CLICK_VOLUME_FACTOR, type Settings } from '../state';
+import { CLICK_VOLUME_FACTOR, isSubMuted, type Settings } from '../state';
 import { scheduleSound, type TickKind } from './sounds';
 
 export interface Position {
@@ -19,7 +19,9 @@ export function advance(pos: Position, beats: number, subdivision: number): Posi
 }
 
 export function tickKind(settings: Settings, pos: Position): TickKind | 'silent' {
-  if (pos.subIndex !== 0) return settings.subMuted ? 'silent' : 'sub';
+  if (pos.subIndex !== 0) {
+    return isSubMuted(settings.mutedSubs, pos.beatIndex, pos.subIndex) ? 'silent' : 'sub';
+  }
   const state = settings.beatStates[pos.beatIndex] ?? 'normal';
   if (state === 'mute') return 'silent';
   if (state === 'tick') return 'sub';
