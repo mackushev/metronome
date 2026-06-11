@@ -84,6 +84,8 @@ export interface CircleCallbacks {
   onBeatsSelect: (beats: number) => void;
   /** Tap on an outer dot on the left: set the number of clicks per beat */
   onSubdivSelect: (subdivision: number) => void;
+  /** Tap on a subdivision dot: mute/unmute the ghost clicks */
+  onSubToggle: () => void;
 }
 
 interface SelectorDot {
@@ -262,17 +264,18 @@ export class CircleView {
 
   /** Rebuilds the dots to match the current settings (call on every change) */
   render(settings: Settings): void {
-    const { beats, subdivision, beatStates } = settings;
+    const { beats, subdivision, beatStates, subMuted } = settings;
     if (beats !== this.beats || subdivision !== this.subdivision) {
       this.rebuild(beats, subdivision);
     }
-    for (let beat = 0; beat < beats; beat++) {
-      const dot = this.dots[beat * subdivision];
-      dot.setAttribute(
-        'class',
-        `dot dot-beat ${beatStates[beat] ?? 'normal'}${beat * subdivision === this.activeIndex ? ' active' : ''}`,
-      );
-    }
+    this.dots.forEach((dot, i) => {
+      const active = i === this.activeIndex ? ' active' : '';
+      if (i % subdivision === 0) {
+        dot.setAttribute('class', `dot dot-beat ${beatStates[i / subdivision] ?? 'normal'}${active}`);
+      } else {
+        dot.setAttribute('class', `dot dot-sub${subMuted ? ' muted' : ''}${active}`);
+      }
+    });
     this.renderSelector(this.selBeats, beats);
     this.renderSelector(this.selSubdiv, subdivision);
   }
@@ -312,6 +315,11 @@ export class CircleView {
         dot.addEventListener('pointerdown', (event) => {
           event.preventDefault();
           this.callbacks.onBeatClick(beatIndex);
+        });
+      } else {
+        dot.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          this.callbacks.onSubToggle();
         });
       }
       this.svg.append(dot);

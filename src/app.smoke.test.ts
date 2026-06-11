@@ -128,6 +128,21 @@ describe('smoke: the app mounts', () => {
     }
   });
 
+  it('tapping a subdivision dot toggles ghost-click muting', () => {
+    // turn on subdivisions so sub dots exist
+    const btn2 = document.querySelector<HTMLButtonElement>('#subdiv-seg .seg-btn[data-value="2"]')!;
+    btn2.click();
+    let subs = document.querySelectorAll('#circle .dot-sub');
+    expect(subs.length).toBeGreaterThan(0);
+    expect(subs[0].classList.contains('muted')).toBe(false);
+    subs[0].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    subs = document.querySelectorAll('#circle .dot-sub');
+    expect(subs[0].classList.contains('muted')).toBe(true);
+    subs[0].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    subs = document.querySelectorAll('#circle .dot-sub');
+    expect(subs[0].classList.contains('muted')).toBe(false);
+  });
+
   it('the audio notice is hidden by default', () => {
     expect((document.getElementById('audio-notice') as HTMLElement).hidden).toBe(true);
   });

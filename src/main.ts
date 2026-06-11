@@ -27,6 +27,7 @@ const circle = new CircleView(svg, {
     store.update({ beats, beatStates: resizeBeatStates(store.get().beatStates, beats) });
   },
   onSubdivSelect: (subdivision) => store.update({ subdivision }),
+  onSubToggle: () => store.update({ subMuted: !store.get().subMuted }),
 });
 
 const beatBar = new BeatBar(document.getElementById('beat-bar')!, toggleBeatState);

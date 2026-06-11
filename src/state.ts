@@ -25,6 +25,8 @@ export interface Settings {
   volume: number;
   /** Subdivision clicks vs beats loudness ratio */
   clickVolume: ClickVolume;
+  /** Subdivision (ghost) clicks muted entirely — toggled by tapping a sub dot */
+  subMuted: boolean;
   /** State of each beat in the measure, length = beats */
   beatStates: BeatState[];
   trainer: TrainerSettings;
@@ -41,10 +43,11 @@ export const SOUNDS: { name: SoundName; label: string }[] = [
   { name: 'cowbell', label: 'Cowbell' },
 ];
 
-/** Gain multiplier for subdivision clicks per balance position */
+/** Gain multiplier for subdivision clicks per balance position;
+    soft = barely audible ghost notes */
 export const CLICK_VOLUME_FACTOR: Record<ClickVolume, number> = {
-  soft: 0.45,
-  medium: 0.7,
+  soft: 0.18,
+  medium: 0.6,
   equal: 1,
 };
 
@@ -82,6 +85,7 @@ export function defaultSettings(): Settings {
     sound: 'click',
     volume: 0.8,
     clickVolume: 'soft',
+    subMuted: false,
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, deltaSec: 30, stepBpm: 5, maxBpm: null },
   };
@@ -110,6 +114,7 @@ export function loadSettings(): Settings {
         parsed.clickVolume && parsed.clickVolume in CLICK_VOLUME_FACTOR
           ? parsed.clickVolume
           : fallback.clickVolume,
+      subMuted: Boolean(parsed.subMuted),
       beatStates: resizeBeatStates(
         states.map((s) => (s === 'accent' || s === 'mute' || s === 'tick' ? s : 'normal')),
         beats,

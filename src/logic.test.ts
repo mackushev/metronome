@@ -51,6 +51,13 @@ describe('tickKind: accents and mutes', () => {
   it('a tick beat sounds like a regular subdivision tick', () => {
     expect(tickKind(settings, { beatIndex: 3, subIndex: 0 })).toBe('sub');
   });
+
+  it('subMuted silences subdivisions but not beats (including tick beats)', () => {
+    const muted: Settings = { ...settings, subMuted: true };
+    expect(tickKind(muted, { beatIndex: 0, subIndex: 1 })).toBe('silent');
+    expect(tickKind(muted, { beatIndex: 0, subIndex: 0 })).toBe('accent');
+    expect(tickKind(muted, { beatIndex: 3, subIndex: 0 })).toBe('sub');
+  });
 });
 
 describe('beat states', () => {

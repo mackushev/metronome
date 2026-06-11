@@ -277,6 +277,14 @@ body {
 .dot-sub {
   fill: var(--dim);
   opacity: 0.9;
+  /* A wide transparent stroke keeps a finger-sized tap target on the tiny dot */
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+}
+
+.dot-sub.muted {
+  opacity: 0.25;
 }
 
 .dot-beat {
@@ -618,6 +626,11 @@ body {
 @media (min-width: 820px) {
   #app {
     padding: 32px;
+  }
+
+  /* The trainer is the most used block — keep it at the top of the panel */
+  .control-group.trainer {
+    order: -1;
   }
 
   .layout {
