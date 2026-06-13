@@ -102,37 +102,55 @@ describe('normalizeDeltaDeg: tempo dial', () => {
 });
 
 describe('speed trainer', () => {
-  const params = { deltaSec: 10, stepBpm: 5, maxBpm: 130 };
+  const p = { stages: [{ deltaSec: 10, stepBpm: 5, maxBpm: 130 }] };
 
   it('the tempo does not grow before the first interval', () => {
-    expect(trainerTargetBpm(100, 0, params)).toBe(100);
-    expect(trainerTargetBpm(100, 9.9, params)).toBe(100);
+    expect(trainerTargetBpm(100, 0, p)).toBe(100);
+    expect(trainerTargetBpm(100, 9.9, p)).toBe(100);
   });
 
   it('grows in steps of deltaSec', () => {
-    expect(trainerTargetBpm(100, 10, params)).toBe(105);
-    expect(trainerTargetBpm(100, 25, params)).toBe(110);
-    expect(trainerTargetBpm(100, 40, params)).toBe(120);
+    expect(trainerTargetBpm(100, 10, p)).toBe(105);
+    expect(trainerTargetBpm(100, 25, p)).toBe(110);
+    expect(trainerTargetBpm(100, 40, p)).toBe(120);
   });
 
   it('stops at maxBpm', () => {
-    expect(trainerTargetBpm(100, 100, params)).toBe(130);
-    expect(trainerAtMax(130, 100, params)).toBe(true);
-    expect(trainerAtMax(125, 100, params)).toBe(false);
+    expect(trainerTargetBpm(100, 100, p)).toBe(130);
+    expect(trainerAtMax(130, 100, p)).toBe(true);
+    expect(trainerAtMax(125, 100, p)).toBe(false);
   });
 
   it('without maxBpm it is capped by the global limit of 300', () => {
-    expect(trainerTargetBpm(290, 1000, { deltaSec: 10, stepBpm: 5, maxBpm: null })).toBe(300);
+    const infinite = { stages: [{ deltaSec: 10, stepBpm: 5, maxBpm: null }] };
+    expect(trainerTargetBpm(290, 1000, infinite)).toBe(300);
   });
 
   it('maxBpm below the starting tempo does not lower the tempo', () => {
-    expect(trainerTargetBpm(150, 50, params)).toBe(150);
-    expect(trainerAtMax(150, 150, params)).toBe(true);
+    expect(trainerTargetBpm(150, 50, p)).toBe(150);
+    expect(trainerAtMax(150, 150, p)).toBe(true);
   });
 
   it('progress and time until the next step', () => {
-    expect(trainerProgress(3, 10)).toBeCloseTo(0.3);
-    expect(trainerProgress(13, 10)).toBeCloseTo(0.3);
-    expect(secondsToNextStep(3, 10)).toBeCloseTo(7);
+    expect(trainerProgress(3, 100, p)).toBeCloseTo(0.3);
+    expect(trainerProgress(13, 100, p)).toBeCloseTo(0.3);
+    expect(secondsToNextStep(3, 100, p)).toBeCloseTo(7);
+  });
+
+  it('two-stage: advances to stage 2 after stage 1 completes', () => {
+    const two = {
+      stages: [
+        { deltaSec: 10, stepBpm: 5, maxBpm: 130 }, // 6 steps × 10s = 60s to complete
+        { deltaSec: 15, stepBpm: 10, maxBpm: 200 },
+      ],
+    };
+    // Still in stage 1
+    expect(trainerTargetBpm(100, 55, two)).toBe(125);
+    // Stage 1 just completed (elapsed=60), stage 2 begins
+    expect(trainerTargetBpm(100, 60, two)).toBe(130);
+    // 15s into stage 2 → +10 BPM
+    expect(trainerTargetBpm(100, 75, two)).toBe(140);
+    expect(trainerAtMax(200, 100, two)).toBe(true);
+    expect(trainerAtMax(150, 100, two)).toBe(false);
   });
 });

@@ -1,7 +1,13 @@
 import './style.css';
 import { MetronomeEngine } from './audio/engine';
 import { clampBpm, loadSettings, resizeBeatStates, Store, cycleBeatState, toggleSubMute } from './state';
-import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
+import {
+  currentStageStepBpm,
+  secondsToNextStep,
+  trainerAtMax,
+  trainerProgress,
+  trainerTargetBpm,
+} from './trainer';
 import { BeatBar } from './ui/beatbar';
 import { CircleView } from './ui/circle';
 import { bindControls } from './ui/controls';
@@ -106,8 +112,7 @@ function setUserBpm(bpm: number): void {
 }
 
 bindControls(store, {
-  onUserBpmChange: setUserBpm,
-  onSoundPreview: () => engine.preview(),
+  onSoundPreview: (kind) => engine.preview(kind ?? 'normal'),
 });
 
 // --- Start/stop ---
@@ -180,9 +185,10 @@ function frame(): void {
       circle.setTrainerProgress(1);
       trainerStatus.textContent = `Limit reached: ${s.bpm} BPM`;
     } else {
-      circle.setTrainerProgress(trainerProgress(elapsed, s.trainer.deltaSec));
-      const toNext = Math.ceil(secondsToNextStep(elapsed, s.trainer.deltaSec));
-      trainerStatus.textContent = `+${s.trainer.stepBpm} BPM in ${toNext} s (started at ${trainerBase.startBpm})`;
+      circle.setTrainerProgress(trainerProgress(elapsed, trainerBase.startBpm, s.trainer));
+      const toNext = Math.ceil(secondsToNextStep(elapsed, trainerBase.startBpm, s.trainer));
+      const stepBpm = currentStageStepBpm(elapsed, trainerBase.startBpm, s.trainer);
+      trainerStatus.textContent = `+${stepBpm} BPM in ${toNext} s (started at ${trainerBase.startBpm})`;
     }
   } else {
     circle.setTrainerProgress(null);

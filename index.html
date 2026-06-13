@@ -29,29 +29,74 @@
         </section>
 
         <section class="controls">
-          <div class="control-group group-tempo">
-            <div class="group-label">Tempo</div>
-            <div class="row tempo-row">
-              <button class="btn" data-bpm-delta="-5">−5</button>
-              <button class="btn" data-bpm-delta="-1">−1</button>
-              <input type="range" id="bpm-slider" min="20" max="300" step="1" aria-label="Tempo, BPM" />
-              <button class="btn" data-bpm-delta="1">+1</button>
-              <button class="btn" data-bpm-delta="5">+5</button>
-            </div>
-          </div>
+          <div class="control-group trainer">
+            <label class="toggle">
+              <input type="checkbox" id="trainer-enabled" />
+              <span>Speed trainer</span>
+            </label>
+            <div class="trainer-body" id="trainer-body">
 
-          <div class="control-group group-beats">
-            <div class="group-label">Beats per measure</div>
-            <div class="row stepper">
-              <button class="btn" id="beats-dec" aria-label="Fewer beats">−</button>
-              <span class="stepper-value" id="beats-value">4</span>
-              <button class="btn" id="beats-inc" aria-label="More beats">+</button>
-            </div>
-          </div>
+              <!-- Stage 0 -->
+              <div class="trainer-stage" id="trainer-stage-0">
+                <div class="trainer-row">
+                  <span class="trainer-lbl">every</span>
+                  <button class="btn trainer-btn trainer-drag-btn" id="t0-delta-dec">−15s</button>
+                  <span class="trainer-num" id="t0-delta-num">30</span>
+                  <span class="trainer-unit">s</span>
+                  <button class="btn trainer-btn trainer-drag-btn" id="t0-delta-inc">+15s</button>
+                </div>
+                <div class="trainer-row" id="t0-step-row">
+                  <span class="trainer-lbl">add</span>
+                  <button class="btn trainer-btn" id="t0-step-dec">−</button>
+                  <span class="trainer-num" id="t0-step-num">5</span>
+                  <span class="trainer-unit">BPM</span>
+                  <button class="btn trainer-btn" id="t0-step-inc">+</button>
+                </div>
+                <div class="trainer-row" id="t0-max-row">
+                  <span class="trainer-lbl">up to</span>
+                  <button class="btn trainer-btn" id="t0-max-dec">−20</button>
+                  <span class="trainer-num" id="t0-max-num">∞</span>
+                  <span class="trainer-unit">BPM</span>
+                  <button class="btn trainer-btn" id="t0-max-inc">+20</button>
+                  <button class="btn trainer-clear-btn" id="t0-max-clear" hidden title="Remove limit">∞</button>
+                </div>
+              </div>
 
-          <div class="control-group group-subdiv">
-            <div class="group-label">Clicks per beat</div>
-            <div class="row seg" id="subdiv-seg"></div>
+              <!-- Add stage 2 (shown when stage 0 has maxBpm set) -->
+              <button class="btn trainer-add-stage-btn" id="trainer-add-stage" hidden>+ add stage</button>
+
+              <!-- Stage 1 (hidden until added) -->
+              <div class="trainer-stage" id="trainer-stage-1" hidden>
+                <div class="trainer-stage-sep">
+                  <span class="trainer-then">↓ then</span>
+                  <button class="btn trainer-remove-stage-btn" id="trainer-remove-stage">✕</button>
+                </div>
+                <div class="trainer-row">
+                  <span class="trainer-lbl">every</span>
+                  <button class="btn trainer-btn trainer-drag-btn" id="t1-delta-dec">−15s</button>
+                  <span class="trainer-num" id="t1-delta-num">30</span>
+                  <span class="trainer-unit">s</span>
+                  <button class="btn trainer-btn trainer-drag-btn" id="t1-delta-inc">+15s</button>
+                </div>
+                <div class="trainer-row" id="t1-step-row">
+                  <span class="trainer-lbl">add</span>
+                  <button class="btn trainer-btn" id="t1-step-dec">−</button>
+                  <span class="trainer-num" id="t1-step-num">5</span>
+                  <span class="trainer-unit">BPM</span>
+                  <button class="btn trainer-btn" id="t1-step-inc">+</button>
+                </div>
+                <div class="trainer-row" id="t1-max-row">
+                  <span class="trainer-lbl">up to</span>
+                  <button class="btn trainer-btn" id="t1-max-dec">−20</button>
+                  <span class="trainer-num" id="t1-max-num">∞</span>
+                  <span class="trainer-unit">BPM</span>
+                  <button class="btn trainer-btn" id="t1-max-inc">+20</button>
+                  <button class="btn trainer-clear-btn" id="t1-max-clear" hidden title="Remove limit">∞</button>
+                </div>
+              </div>
+
+              <div class="trainer-status" id="trainer-status"></div>
+            </div>
           </div>
 
           <div class="control-group group-sound">
@@ -59,25 +104,6 @@
             <div class="row seg" id="sound-seg"></div>
             <div class="balance-label">Clicks vs beats</div>
             <div class="row seg" id="balance-seg"></div>
-          </div>
-
-          <div class="control-group trainer">
-            <label class="toggle">
-              <input type="checkbox" id="trainer-enabled" />
-              <span>Speed trainer</span>
-            </label>
-            <div class="trainer-fields" id="trainer-fields">
-              <label>every
-                <input type="number" id="trainer-delta" min="2" max="600" step="1" /> s
-              </label>
-              <label>add
-                <input type="number" id="trainer-step" min="1" max="60" step="1" /> BPM
-              </label>
-              <label>up to
-                <input type="number" id="trainer-max" min="20" max="300" step="1" placeholder="∞" /> BPM
-              </label>
-              <div class="trainer-status" id="trainer-status"></div>
-            </div>
           </div>
 
           <div class="control-group group-volume">
@@ -90,7 +116,7 @@
           </div>
 
           <p class="hint">
-            Space — start/stop. Tap a beat rectangle below the circle
+            Tap a beat rectangle below the circle
             (or a dot on the circle): normal → accent → tick → mute.
             Tap a small subdivision dot to mute/unmute that single ghost click.
             Tempo: spin the ring around the play button (clockwise — faster,

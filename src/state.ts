@@ -4,14 +4,15 @@ export type SoundName = 'click' | 'beep' | 'cowbell';
 /** Loudness of subdivision clicks relative to beats */
 export type ClickVolume = 'soft' | 'medium' | 'equal';
 
+export interface TrainerStage {
+  deltaSec: number;
+  stepBpm: number;
+  maxBpm: number | null;
+}
+
 export interface TrainerSettings {
   enabled: boolean;
-  /** How often to raise the tempo, seconds */
-  deltaSec: number;
-  /** How many BPM to add per step */
-  stepBpm: number;
-  /** Tempo ceiling; null — no limit */
-  maxBpm: number | null;
+  stages: TrainerStage[];
 }
 
 export interface Settings {
@@ -43,8 +44,7 @@ export const SOUNDS: { name: SoundName; label: string }[] = [
   { name: 'cowbell', label: 'Cowbell' },
 ];
 
-/** Gain multiplier for subdivision clicks per balance position;
-    soft = barely audible ghost notes */
+/** Gain multiplier for subdivision clicks per balance position */
 export const CLICK_VOLUME_FACTOR: Record<ClickVolume, number> = {
   soft: 0.18,
   medium: 0.6,
@@ -90,6 +90,8 @@ export function cycleBeatState(state: BeatState): BeatState {
   }
 }
 
+const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: null };
+
 export function defaultSettings(): Settings {
   return {
     bpm: 120,
@@ -100,20 +102,48 @@ export function defaultSettings(): Settings {
     clickVolume: 'soft',
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
-    trainer: { enabled: false, deltaSec: 30, stepBpm: 5, maxBpm: null },
+    trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
   };
 }
 
 const STORAGE_KEY = 'metronome-settings-v1';
+
+function parseTrainerStage(raw: unknown): TrainerStage {
+  const s = raw as Record<string, unknown>;
+  return {
+    deltaSec: Math.max(2, Number(s?.deltaSec) || DEFAULT_STAGE.deltaSec),
+    stepBpm: Math.max(1, Number(s?.stepBpm) || DEFAULT_STAGE.stepBpm),
+    maxBpm: s?.maxBpm != null && s.maxBpm !== '' ? clampBpm(Number(s.maxBpm)) : null,
+  };
+}
 
 export function loadSettings(): Settings {
   const fallback = defaultSettings();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
-    const parsed = JSON.parse(raw) as Partial<Settings>;
+    const parsed = JSON.parse(raw) as Partial<Settings> & { trainer?: any };
     const beats = Math.min(BEATS_MAX, Math.max(BEATS_MIN, Number(parsed.beats) || fallback.beats));
     const states = Array.isArray(parsed.beatStates) ? (parsed.beatStates as BeatState[]) : [];
+
+    let trainer: TrainerSettings;
+    const rawTrainer = parsed.trainer;
+    if (rawTrainer && Array.isArray(rawTrainer.stages)) {
+      const stages: TrainerStage[] = rawTrainer.stages.map(parseTrainerStage);
+      trainer = {
+        enabled: Boolean(rawTrainer.enabled),
+        stages: stages.length > 0 ? stages : [{ ...DEFAULT_STAGE }],
+      };
+    } else if (rawTrainer) {
+      // Migrate from old format { enabled, deltaSec, stepBpm, maxBpm }
+      trainer = {
+        enabled: Boolean(rawTrainer.enabled),
+        stages: [parseTrainerStage(rawTrainer)],
+      };
+    } else {
+      trainer = fallback.trainer;
+    }
+
     return {
       bpm: clampBpm(Number(parsed.bpm) || fallback.bpm),
       beats,
@@ -134,7 +164,7 @@ export function loadSettings(): Settings {
         states.map((s) => (s === 'accent' || s === 'mute' || s === 'tick' ? s : 'normal')),
         beats,
       ),
-      trainer: { ...fallback.trainer, ...(parsed.trainer ?? {}), enabled: Boolean(parsed.trainer?.enabled) },
+      trainer,
     };
   } catch {
     return fallback;
@@ -158,7 +188,6 @@ export class Store {
 
   update(patch: Partial<Settings>): void {
     this.settings = { ...this.settings, ...patch };
-    if (patch.trainer) this.settings.trainer = { ...patch.trainer };
     this.persist();
     for (const fn of this.listeners) fn(this.settings);
   }

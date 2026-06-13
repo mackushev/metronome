@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 describe('smoke: the app mounts', () => {
   beforeAll(async () => {
@@ -47,8 +47,7 @@ describe('smoke: the app mounts', () => {
     expect(document.getElementById('bpm-value')!.textContent).toBe('120');
   });
 
-  it('subdivision and sound controls are built', () => {
-    expect(document.querySelectorAll('#subdiv-seg .seg-btn').length).toBe(8);
+  it('sound controls are built', () => {
     expect(document.querySelectorAll('#sound-seg .seg-btn').length).toBe(3);
   });
 
@@ -95,11 +94,8 @@ describe('smoke: the app mounts', () => {
     expect(slider.value).toBe('40');
   });
 
-  it('the +5 button changes the tempo and the slider', () => {
-    const plus5 = document.querySelector<HTMLButtonElement>('[data-bpm-delta="5"]')!;
-    plus5.click();
-    expect(document.getElementById('bpm-value')!.textContent).toBe('125');
-    expect((document.getElementById('bpm-slider') as HTMLInputElement).value).toBe('125');
+  it('tempo is displayed correctly', () => {
+    expect(document.getElementById('bpm-value')!.textContent).toBe('120');
   });
 
   it('beat bar: one rectangle per beat, a tap cycles its state', () => {
@@ -112,26 +108,26 @@ describe('smoke: the app mounts', () => {
     expect(cells[2].classList.contains('accent')).toBe(true);
   });
 
-  it('trainer inputs auto-apply after a typing pause', () => {
-    vi.useFakeTimers();
-    try {
-      const delta = document.getElementById('trainer-delta') as HTMLInputElement;
-      // an invalid value falls back to the previous one (30) on apply,
-      // which makes the auto-apply observable
-      delta.value = '0';
-      delta.dispatchEvent(new Event('input', { bubbles: true }));
-      expect(delta.value).toBe('0');
-      vi.advanceTimersByTime(2100);
-      expect(delta.value).toBe('30');
-    } finally {
-      vi.useRealTimers();
-    }
+  it('trainer: every button updates the displayed value', () => {
+    const incBtn = document.getElementById('t0-delta-inc') as HTMLButtonElement;
+    const decBtn = document.getElementById('t0-delta-dec') as HTMLButtonElement;
+    const num = document.getElementById('t0-delta-num')!;
+    // default is 30; tap +15s
+    incBtn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    incBtn.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    expect(num.textContent).toBe('45');
+    // tap −15s
+    decBtn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    decBtn.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    expect(num.textContent).toBe('30');
   });
 
   it('tapping a subdivision dot mutes only that single ghost click', () => {
-    // turn on subdivisions so sub dots exist
-    const btn2 = document.querySelector<HTMLButtonElement>('#subdiv-seg .seg-btn[data-value="2"]')!;
-    btn2.click();
+    // Use the circle arc selector to turn on subdivisions (2nd dot = value 2)
+    const subdivDots = document.querySelectorAll('#circle .sel-hit');
+    // The last 8 hit zones belong to the subdiv arc
+    const subdiv2Hit = subdivDots[subdivDots.length - 7]; // 2nd subdiv dot (value=2)
+    subdiv2Hit.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     let subs = document.querySelectorAll('#circle .dot-sub');
     expect(subs.length).toBeGreaterThan(1);
     subs[0].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
@@ -149,9 +145,10 @@ describe('smoke: the app mounts', () => {
 
   it('dial arrows nudge the tempo by ±1', () => {
     const hits = document.querySelectorAll('#circle .dial-arrow-hit');
+    const before = Number(document.getElementById('bpm-value')!.textContent);
     hits[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    expect(document.getElementById('bpm-value')!.textContent).toBe('126');
+    expect(document.getElementById('bpm-value')!.textContent).toBe(String(before + 1));
     hits[0].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    expect(document.getElementById('bpm-value')!.textContent).toBe('125');
+    expect(document.getElementById('bpm-value')!.textContent).toBe(String(before));
   });
 });

@@ -448,24 +448,6 @@ body {
   color: var(--accent);
 }
 
-.tempo-row input[type='range'] {
-  flex: 1;
-  accent-color: var(--accent);
-  min-width: 60px;
-}
-
-.stepper {
-  justify-content: center;
-}
-
-.stepper-value {
-  min-width: 56px;
-  text-align: center;
-  font-size: 24px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
 /* --- Speed trainer --- */
 
 .toggle {
@@ -482,36 +464,102 @@ body {
   accent-color: var(--trainer);
 }
 
-.trainer-fields {
+.trainer-body {
   margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  align-items: center;
-  color: var(--dim);
-  font-size: 14px;
 }
 
-.trainer-fields.disabled {
+.trainer-body.disabled {
   opacity: 0.45;
   pointer-events: none;
 }
 
-.trainer-fields label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.trainer-stage + .trainer-stage {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
 }
 
-.trainer-fields input[type='number'] {
-  width: 64px;
-  min-height: 36px;
+.trainer-stage-sep {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.trainer-then {
+  color: var(--trainer);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.trainer-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.trainer-lbl {
+  min-width: 42px;
+  color: var(--dim);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.trainer-num {
+  flex: 1;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+}
+
+.trainer-unit {
+  color: var(--dim);
+  font-size: 12px;
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+.trainer-btn {
+  min-width: 50px;
+  font-size: 13px;
+  padding: 0 6px;
+  flex-shrink: 0;
+}
+
+/* drag-enabled buttons must block browser touch scroll */
+.trainer-drag-btn {
+  touch-action: none;
+  user-select: none;
+  cursor: ns-resize;
+}
+
+.trainer-clear-btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 5px;
+  font-size: 13px;
+  color: var(--trainer);
+  border-color: var(--trainer);
+  flex-shrink: 0;
+}
+
+.trainer-add-stage-btn {
+  width: 100%;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--trainer);
+  border-color: var(--trainer);
+}
+
+.trainer-remove-stage-btn {
+  min-width: auto;
+  min-height: 30px;
   padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 15px;
+  font-size: 12px;
+  color: var(--dim);
 }
 
 /* --- Clicks vs beats balance: a beat dot + a click dot of growing size --- */
@@ -588,9 +636,6 @@ body {
   margin: 0;
 }
 
-/* --- Narrow layout: tempo/beats/clicks have on-circle counterparts,
-       so the trainer and sound stay below the circle, duplicates go to the bottom --- */
-
 @media (max-width: 819px) {
   .control-group.trainer {
     order: 1;
@@ -600,24 +645,12 @@ body {
     order: 2;
   }
 
-  .group-tempo {
+  .group-volume {
     order: 3;
   }
 
-  .group-beats {
-    order: 4;
-  }
-
-  .group-subdiv {
-    order: 5;
-  }
-
-  .group-volume {
-    order: 6;
-  }
-
   .hint {
-    order: 7;
+    order: 4;
   }
 }
 
