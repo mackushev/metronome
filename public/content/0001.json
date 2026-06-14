@@ -1,0 +1,32 @@
+[
+  {
+    "image": "sample.svg",
+    "w": 1200,
+    "h": 1600,
+    "page": "1",
+    "topic": "Warm-ups",
+    "grid": {
+      "rows": 4,
+      "cols": 2,
+      "margin": { "top": 120, "right": 60, "bottom": 785, "left": 60 },
+      "gapX": 40,
+      "gapY": 30,
+      "order": "row-major"
+    }
+  },
+  {
+    "image": "sample.svg",
+    "w": 1200,
+    "h": 1600,
+    "page": "2",
+    "topic": "Accents",
+    "grid": {
+      "rows": 4,
+      "cols": 2,
+      "margin": { "top": 845, "right": 60, "bottom": 60, "left": 60 },
+      "gapX": 40,
+      "gapY": 30,
+      "order": "row-major"
+    }
+  }
+]

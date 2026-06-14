@@ -11,6 +11,7 @@ import {
 import { BeatBar } from './ui/beatbar';
 import { CircleView } from './ui/circle';
 import { bindControls } from './ui/controls';
+import { ExerciseView } from './ui/exercise-view';
 
 const store = new Store(loadSettings());
 const engine = new MetronomeEngine(() => store.get());
@@ -38,7 +39,8 @@ const circle = new CircleView(svg, {
   },
 });
 
-const beatBar = new BeatBar(document.getElementById('beat-bar')!, toggleBeatState);
+const beatBarEl = document.getElementById('beat-bar')!;
+const beatBar = new BeatBar(beatBarEl, toggleBeatState);
 
 const bpmValue = document.getElementById('bpm-value')!;
 const audioNotice = document.getElementById('audio-notice')!;
@@ -114,6 +116,35 @@ function setUserBpm(bpm: number): void {
 bindControls(store, {
   onSoundPreview: (kind) => engine.preview(kind ?? 'normal'),
 });
+
+// --- Metronome / Exercises mode switch: the two pills reshape the page ---
+const exerciseView = new ExerciseView(store);
+const appEl = document.getElementById('app')!;
+const modeMetronome = document.getElementById('mode-metronome') as HTMLButtonElement;
+const modeExercises = document.getElementById('mode-exercises') as HTMLButtonElement;
+
+function syncExerciseMode(): void {
+  const on = store.get().exercise.enabled;
+  appEl.classList.toggle('mode-exercises', on);
+  appEl.classList.toggle('mode-metronome', !on);
+  modeExercises.classList.toggle('selected', on);
+  modeMetronome.classList.toggle('selected', !on);
+  // In exercise mode the beat bar gives way to the practice sheet.
+  beatBarEl.hidden = on;
+  if (on) void exerciseView.show();
+  else exerciseView.hide();
+}
+
+function setExerciseMode(on: boolean): void {
+  if (store.get().exercise.enabled !== on) {
+    store.update({ exercise: { ...store.get().exercise, enabled: on } });
+  }
+  syncExerciseMode();
+}
+
+modeMetronome.addEventListener('click', () => setExerciseMode(false));
+modeExercises.addEventListener('click', () => setExerciseMode(true));
+syncExerciseMode();
 
 // --- Start/stop ---
 function togglePlay(): void {

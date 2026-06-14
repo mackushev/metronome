@@ -56,7 +56,7 @@ body {
   aspect-ratio: 1;
 }
 
-/* --- Beat bar below the circle --- */
+/* --- Beat bar below the circle (metronome mode) --- */
 
 .beat-bar {
   display: flex;
@@ -64,6 +64,10 @@ body {
   gap: 6px;
   height: 44px;
   padding: 0 6px;
+}
+
+.beat-bar[hidden] {
+  display: none;
 }
 
 .beat-cell {
@@ -636,34 +640,143 @@ body {
   margin: 0;
 }
 
-@media (max-width: 819px) {
-  .control-group.trainer {
-    order: 1;
-  }
+/* --- Page bottom: volume + help, pushed below everything --- */
 
-  .group-sound {
-    order: 2;
-  }
-
-  .group-volume {
-    order: 3;
-  }
-
-  .hint {
-    order: 4;
-  }
+.page-bottom {
+  width: min(92vw, 440px);
+  margin: 28px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-/* --- Tablet and desktop: circle on the left, settings on the right --- */
+/* --- Metronome / Exercises mode switch (two pills) --- */
+
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.mode-pill {
+  flex: 1;
+  max-width: 200px;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.mode-pill.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  color: var(--accent);
+}
+
+/* --- Exercise viewer: full-width practice sheet below the metronome --- */
+
+.exercise[hidden] {
+  display: none;
+}
+
+.exercise {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* When space allows, span the circle + speed-trainer panel width. */
+  width: 100%;
+  max-width: 880px;
+  margin: 8px auto 0;
+}
+
+.exercise-viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+}
+
+.exercise-viewport img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  /* width/height/transform are set inline by the crop transform */
+  max-width: none;
+}
+
+.exercise-caption {
+  text-align: center;
+  color: var(--dim);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.exercise-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+  color: var(--dim);
+  font-size: 14px;
+}
+
+.exercise-controls > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exercise-controls select {
+  min-height: 38px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.exercise-controls #ex-auto-sec {
+  width: 60px;
+  min-height: 38px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.ex-unit {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.exercise-empty {
+  color: var(--dim);
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.exercise-empty code {
+  color: var(--text);
+}
+
+/* --- Tablet and desktop: circle + exercise on the left, settings on the right --- */
 
 @media (min-width: 820px) {
   #app {
     padding: 32px;
-  }
-
-  /* The trainer is the most used block — keep it at the top of the panel */
-  .control-group.trainer {
-    order: -1;
   }
 
   .layout {
@@ -675,11 +788,13 @@ body {
 
   .circle-col {
     width: min(44vw, 480px);
-    position: sticky;
-    top: 32px;
   }
 
   .controls {
     width: 360px;
+  }
+
+  .page-bottom {
+    width: min(92vw, 920px);
   }
 }

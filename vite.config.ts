@@ -15,6 +15,24 @@ export default defineConfig(({ command }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
+      workbox: {
+        // Exercise content is opt-in and can be large — keep it out of the
+        // precache (which would force a full download on first load) and serve
+        // it from a runtime cache instead, so pages stay available offline once
+        // viewed.
+        globIgnores: ['**/content/**'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/content/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-content',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'Metronome',
         short_name: 'Metronome',

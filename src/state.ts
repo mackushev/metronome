@@ -15,6 +15,21 @@ export interface TrainerSettings {
   stages: TrainerStage[];
 }
 
+export interface ExerciseState {
+  /** Exercise practice mode on; when on, the beat bar gives way to the sheet. */
+  enabled: boolean;
+  /** Currently shown item id; null until content loads / first selection. */
+  currentId: string | null;
+  /** Page filter; '' = any page. */
+  page: string;
+  /** Topic filter; '' = any topic. */
+  topic: string;
+  /** Auto-advance picks a random item within the filter instead of the next one. */
+  random: boolean;
+  /** Auto-advance interval in seconds; 0 = off. */
+  autoSec: number;
+}
+
 export interface Settings {
   bpm: number;
   /** Number of beats per measure */
@@ -31,6 +46,7 @@ export interface Settings {
   /** State of each beat in the measure, length = beats */
   beatStates: BeatState[];
   trainer: TrainerSettings;
+  exercise: ExerciseState;
 }
 
 export const BPM_MIN = 20;
@@ -103,6 +119,20 @@ export function defaultSettings(): Settings {
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
+    exercise: { enabled: false, currentId: null, page: '', topic: '', random: false, autoSec: 0 },
+  };
+}
+
+function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
+  const e = raw as Record<string, unknown> | undefined;
+  if (!e) return fallback;
+  return {
+    enabled: Boolean(e.enabled),
+    currentId: typeof e.currentId === 'string' ? e.currentId : null,
+    page: typeof e.page === 'string' ? e.page : fallback.page,
+    topic: typeof e.topic === 'string' ? e.topic : fallback.topic,
+    random: Boolean(e.random),
+    autoSec: typeof e.autoSec === 'number' && e.autoSec >= 0 ? e.autoSec : fallback.autoSec,
   };
 }
 
@@ -165,6 +195,7 @@ export function loadSettings(): Settings {
         beats,
       ),
       trainer,
+      exercise: parseExercise(parsed.exercise, fallback.exercise),
     };
   } catch {
     return fallback;

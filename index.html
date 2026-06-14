@@ -8,7 +8,11 @@
     <title>Metronome</title>
   </head>
   <body>
-    <div id="app">
+    <div id="app" class="mode-metronome">
+      <nav class="mode-switch" aria-label="View">
+        <button class="mode-pill selected" id="mode-metronome" type="button">Metronome</button>
+        <button class="mode-pill" id="mode-exercises" type="button">Exercises</button>
+      </nav>
       <main class="layout">
         <section class="circle-col">
           <div class="circle-wrap">
@@ -105,27 +109,57 @@
             <div class="balance-label">Clicks vs beats</div>
             <div class="row seg" id="balance-seg"></div>
           </div>
-
-          <div class="control-group group-volume">
-            <div class="group-label">Volume</div>
-            <div class="row">
-              <span class="volume-icon">🔈</span>
-              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
-              <span class="volume-icon">🔊</span>
-            </div>
-          </div>
-
-          <p class="hint">
-            Tap a beat rectangle below the circle
-            (or a dot on the circle): normal → accent → tick → mute.
-            Tap a small subdivision dot to mute/unmute that single ghost click.
-            Tempo: spin the ring around the play button (clockwise — faster,
-            one turn = 60 BPM), tap the arrows on the sides of the ring (±1),
-            or drag the circle center up/down. Outer arcs: right — beats
-            per measure, left — clicks per beat.
-          </p>
         </section>
       </main>
+
+      <section class="exercise" id="exercise-view" hidden>
+        <div class="exercise-viewport" id="ex-viewport">
+          <img id="ex-img" alt="Current exercise" />
+        </div>
+        <div class="exercise-caption" id="ex-caption"></div>
+        <div class="exercise-controls">
+          <label>Page
+            <select id="ex-page"></select>
+          </label>
+          <label>Topic
+            <select id="ex-topic"></select>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="ex-auto" />
+            <span>Auto</span>
+          </label>
+          <input type="number" id="ex-auto-sec" min="2" max="120" value="20" aria-label="Auto-advance seconds" />
+          <span class="ex-unit">s</span>
+          <label class="toggle">
+            <input type="checkbox" id="ex-random" />
+            <span>Random</span>
+          </label>
+        </div>
+        <p class="exercise-empty" id="ex-empty" hidden>
+          No exercises yet. Add images and descriptors under
+          <code>public/content/</code> — see <code>HOWTO.md</code>.
+        </p>
+      </section>
+
+      <footer class="page-bottom">
+        <div class="control-group group-volume">
+          <div class="group-label">Volume</div>
+          <div class="row">
+            <span class="volume-icon">🔈</span>
+            <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
+            <span class="volume-icon">🔊</span>
+          </div>
+        </div>
+
+        <p class="hint">
+          Space — start/stop. Tap a dot on the circle:
+          normal → accent → tick → mute. Tap a small subdivision dot to
+          mute/unmute that single ghost click. Tempo: spin the ring around the
+          play button (clockwise — faster, one turn = 60 BPM), tap the arrows on
+          the sides of the ring (±1), or drag the circle center up/down. Outer
+          arcs: right — beats per measure, left — clicks per beat.
+        </p>
+      </footer>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

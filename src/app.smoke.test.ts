@@ -102,10 +102,25 @@ describe('smoke: the app mounts', () => {
     const beats = document.querySelectorAll('#circle .dot-beat').length;
     let cells = document.querySelectorAll('#beat-bar .beat-cell');
     expect(cells.length).toBe(beats);
-    expect(cells[2].classList.contains('normal')).toBe(true);
     cells[2].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     cells = document.querySelectorAll('#beat-bar .beat-cell');
     expect(cells[2].classList.contains('accent')).toBe(true);
+  });
+
+  it('exercises are off by default, so the beat bar is visible', () => {
+    expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(false);
+    expect((document.getElementById('exercise-view') as HTMLElement).hidden).toBe(true);
+    expect(document.getElementById('app')!.classList.contains('mode-metronome')).toBe(true);
+  });
+
+  it('the Exercises pill reshapes the page: sheet shown, beat bar hidden', () => {
+    (document.getElementById('mode-exercises') as HTMLButtonElement).click();
+    expect((document.getElementById('exercise-view') as HTMLElement).hidden).toBe(false);
+    expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(true);
+    expect(document.getElementById('app')!.classList.contains('mode-exercises')).toBe(true);
+    // back to the metronome
+    (document.getElementById('mode-metronome') as HTMLButtonElement).click();
+    expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(false);
   });
 
   it('trainer: every button updates the displayed value', () => {

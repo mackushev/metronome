@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://beat.js.org/content/schema.json",
+  "title": "Exercise content",
+  "description": "Two file kinds in the content folder: the manifest (a list of descriptor filenames) and the descriptors. A descriptor holds one or several groups; each group points at an image and carries both a page and a topic. The app collects pages and topics and orders exercises by the order they appear — that order is not encoded here.",
+  "$defs": {
+    "bbox": {
+      "type": "object",
+      "description": "A pixel rectangle inside the image.",
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 },
+        "w": { "type": "number", "exclusiveMinimum": 0 },
+        "h": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": ["x", "y", "w", "h"],
+      "additionalProperties": false
+    },
+    "item": {
+      "type": "object",
+      "description": "One exercise: a crop of the image (whole image if bbox omitted).",
+      "properties": {
+        "id": { "type": "string", "description": "Defaults to <group>-<n>." },
+        "image": { "type": "string", "description": "Image filename; defaults to the group image." },
+        "bbox": { "$ref": "#/$defs/bbox" },
+        "title": { "type": "string" },
+        "page": { "type": "string", "description": "Defaults to the group page." },
+        "topic": { "type": "string", "description": "Defaults to the group topic." }
+      },
+      "additionalProperties": false
+    },
+    "grid": {
+      "type": "object",
+      "description": "Generates evenly spaced item boxes over the image.",
+      "properties": {
+        "rows": { "type": "integer", "minimum": 1 },
+        "cols": { "type": "integer", "minimum": 1 },
+        "margin": {
+          "type": "object",
+          "properties": {
+            "top": { "type": "number", "minimum": 0 },
+            "right": { "type": "number", "minimum": 0 },
+            "bottom": { "type": "number", "minimum": 0 },
+            "left": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "gapX": { "type": "number", "minimum": 0 },
+        "gapY": { "type": "number", "minimum": 0 },
+        "order": { "enum": ["row-major", "col-major"] }
+      },
+      "required": ["rows", "cols"],
+      "additionalProperties": false
+    },
+    "group": {
+      "type": "object",
+      "description": "One group of exercises: an image (by filename, same folder) tagged with a page and a topic, plus its items as a grid, an explicit list, or the whole image.",
+      "properties": {
+        "image": { "type": "string", "description": "Image filename in the content folder." },
+        "w": { "type": "number", "exclusiveMinimum": 0, "description": "Image pixel width." },
+        "h": { "type": "number", "exclusiveMinimum": 0, "description": "Image pixel height." },
+        "page": { "type": "string", "description": "Page label; several groups may share one." },
+        "topic": { "type": "string", "description": "Topic label; items inherit it." },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } },
+        "grid": { "$ref": "#/$defs/grid" }
+      },
+      "required": ["image", "w", "h", "page", "topic"],
+      "additionalProperties": false
+    },
+    "manifest": {
+      "type": "array",
+      "description": "manifest.json — just the list of descriptor filenames.",
+      "items": { "type": "string" }
+    },
+    "descriptor": {
+      "description": "A descriptor file: one group or an array of groups.",
+      "oneOf": [
+        { "$ref": "#/$defs/group" },
+        { "type": "array", "items": { "$ref": "#/$defs/group" } }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/manifest" },
+    { "$ref": "#/$defs/group" },
+    { "type": "array", "items": { "$ref": "#/$defs/group" } }
+  ]
+}
