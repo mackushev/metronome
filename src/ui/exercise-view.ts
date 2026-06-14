@@ -1,5 +1,5 @@
 import { loadContent } from '../content/manifest';
-import { crop, filterItems, pickNext } from '../content/navigation';
+import { crop, filterItems, pickNext, step } from '../content/navigation';
 import type { ContentModel, Item } from '../content/types';
 import type { ExerciseState, Store } from '../state';
 
@@ -39,6 +39,8 @@ export class ExerciseView {
 
   constructor(store: Store) {
     this.store = store;
+    byId<HTMLButtonElement>('ex-prev').addEventListener('click', () => this.step(-1));
+    byId<HTMLButtonElement>('ex-next').addEventListener('click', () => this.step(1));
     this.pageSel.addEventListener('change', () => this.setFilter({ page: this.pageSel.value }));
     this.topicSel.addEventListener('change', () => this.setFilter({ topic: this.topicSel.value }));
     this.randomChk.addEventListener('change', () => this.patch({ random: this.randomChk.checked }));
@@ -112,6 +114,12 @@ export class ExerciseView {
     const nextState = { ...this.s(), ...p };
     const first = this.filtered(nextState)[0];
     this.patch({ ...p, currentId: first?.id ?? nextState.currentId });
+  }
+
+  /** Manual prev/next within the current filter (overlay arrows). */
+  private step(dir: number): void {
+    const target = step(this.filtered(), this.s().currentId, dir);
+    if (target) this.patch({ currentId: target.id });
   }
 
   /** One auto-advance step within the current filter. */

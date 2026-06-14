@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020';
 import { describe, expect, it } from 'vitest';
 import { composeModel, toSources } from './manifest';
-import { crop, expandGrid, filterItems, pickNext } from './navigation';
+import { crop, expandGrid, filterItems, pickNext, step } from './navigation';
 import type { ContentImage, Source } from './types';
 
 const image: ContentImage = { id: 'x.png', src: 'content/x.png', w: 1000, h: 800 };
@@ -136,6 +136,16 @@ describe('pickNext', () => {
 
   it('returns null for an empty list', () => {
     expect(pickNext([], null, false)).toBeNull();
+  });
+});
+
+describe('step', () => {
+  it('moves forward and backward, wrapping at both ends', () => {
+    const list = filterItems(model(), '1', ''); // [s1-1, s1-2, s3-g]
+    expect(step(list, 's1-1', 1)!.id).toBe('s1-2');
+    expect(step(list, 's3-g', 1)!.id).toBe('s1-1'); // wrap forward
+    expect(step(list, 's1-1', -1)!.id).toBe('s3-g'); // wrap backward
+    expect(step([], null, 1)).toBeNull();
   });
 });
 

@@ -712,6 +712,56 @@ body {
   max-width: none;
 }
 
+/* Prev/next overlay zones on the sheet: shown on hover, always tappable. */
+.ex-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24%;
+  max-width: 130px;
+  margin: 0;
+  padding: 0 10px;
+  border: none;
+  display: flex;
+  align-items: center;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  color: #14161c;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ex-nav-prev {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(to right, color-mix(in srgb, var(--beat) 55%, transparent), transparent);
+}
+
+.ex-nav-next {
+  right: 0;
+  justify-content: flex-end;
+  background: linear-gradient(to left, color-mix(in srgb, var(--beat) 55%, transparent), transparent);
+}
+
+/* Mouse: reveal on hover. */
+.exercise-viewport:hover .ex-nav,
+.ex-nav:focus-visible {
+  opacity: 1;
+}
+
+/* Touch devices have no hover — keep them faintly visible so they are findable. */
+@media (hover: none) {
+  .ex-nav {
+    opacity: 0.4;
+  }
+}
+
 .exercise-caption {
   text-align: center;
   color: var(--dim);

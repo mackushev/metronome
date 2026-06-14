@@ -79,6 +79,15 @@ export function filterItems(model: ContentModel, page: string, topic: string): I
   );
 }
 
+/** Step through `list` by `dir` (+1 next, -1 prev), wrapping around. */
+export function step(list: Item[], currentId: string | null, dir: number): Item | null {
+  if (list.length === 0) return null;
+  const pos = currentId ? list.findIndex((it) => it.id === currentId) : -1;
+  const base = pos < 0 ? 0 : pos;
+  const n = list.length;
+  return list[(((base + dir) % n) + n) % n];
+}
+
 /**
  * The next item to show within `list`: the following one in order, or a random
  * other one when `random` is set. Returns null for an empty list.

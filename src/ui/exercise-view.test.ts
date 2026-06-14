@@ -57,6 +57,16 @@ describe('ExerciseView (jsdom integration)', () => {
     expect([...topics].map((o) => (o as HTMLOptionElement).value)).toEqual(['', 'Warm-ups']);
   });
 
+  it('the overlay arrows step prev/next within the filter (wrapping)', async () => {
+    const store = await mount();
+    (document.getElementById('ex-next') as HTMLButtonElement).click();
+    expect(store.get().exercise.currentId).toBe('0001-2');
+    // from the first item, prev wraps to the last of the 16
+    (document.getElementById('ex-prev') as HTMLButtonElement).click();
+    (document.getElementById('ex-prev') as HTMLButtonElement).click();
+    expect(store.get().exercise.currentId).toBe('0001-16');
+  });
+
   it('the Random toggle is stored', async () => {
     const store = await mount();
     const random = document.getElementById('ex-random') as HTMLInputElement;
