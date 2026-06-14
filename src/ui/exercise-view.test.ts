@@ -77,11 +77,17 @@ describe('ExerciseView (jsdom integration)', () => {
 
   it('enabling Auto records the interval', async () => {
     const store = await mount();
-    const auto = document.getElementById('ex-auto') as HTMLInputElement;
+    const autoToggle = document.getElementById('ex-auto-toggle') as HTMLDivElement;
     const sec = document.getElementById('ex-auto-sec') as HTMLInputElement;
+    // Click the header to toggle auto-advance on (uses default 20s or input value)
+    autoToggle.click();
+    expect(store.get().exercise.autoSec).toBe(20); // default from input
+    // Change the seconds input while auto is on
     sec.value = '30';
-    auto.checked = true;
-    auto.dispatchEvent(new Event('change', { bubbles: true }));
+    sec.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.get().exercise.autoSec).toBe(30);
+    // Click again to turn off
+    autoToggle.click();
+    expect(store.get().exercise.autoSec).toBe(0);
   });
 });

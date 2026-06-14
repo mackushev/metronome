@@ -30,15 +30,54 @@
             <span id="audio-notice-text"></span>
             <button class="audio-notice-close" id="audio-notice-close" aria-label="Dismiss">✕</button>
           </div>
+
+          <!-- Exercise view: on narrow screens sits right below the circle -->
+          <section class="exercise" id="exercise-view" hidden>
+            <div class="exercise-caption" id="ex-caption"></div>
+            <div class="exercise-viewport" id="ex-viewport">
+              <img id="ex-img" alt="Current exercise" />
+              <button class="ex-nav ex-nav-prev" id="ex-prev" type="button" aria-label="Previous exercise">‹</button>
+              <button class="ex-nav ex-nav-next" id="ex-next" type="button" aria-label="Next exercise">›</button>
+              <div class="ex-progress-bar" id="ex-progress-bar" hidden>
+                <div class="ex-progress-fill" id="ex-progress-fill"></div>
+              </div>
+            </div>
+            <div class="exercise-controls">
+              <label>Page
+                <select id="ex-page"></select>
+              </label>
+              <label>Topic
+                <select id="ex-topic"></select>
+              </label>
+            </div>
+            <!-- Collapsible auto-advance panel -->
+            <div class="control-group collapsible-panel" id="ex-auto-panel">
+              <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
+              <div class="collapsible-body" id="ex-auto-body">
+                <div class="exercise-controls" style="margin-top:10px">
+                  <label>
+                    <input type="number" id="ex-auto-sec" min="2" max="120" value="20" aria-label="Auto-advance seconds" />
+                    <span class="ex-unit">s</span>
+                  </label>
+                  <label class="toggle">
+                    <input type="checkbox" id="ex-random" />
+                    <span>Random</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <p class="exercise-empty" id="ex-empty" hidden>
+              No exercises yet. Add images and descriptors under
+              <code>public/content/</code> — see <code>HOWTO.md</code>.
+            </p>
+          </section>
         </section>
 
         <section class="controls">
-          <div class="control-group trainer">
-            <label class="toggle">
-              <input type="checkbox" id="trainer-enabled" />
-              <span>Speed trainer</span>
-            </label>
-            <div class="trainer-body" id="trainer-body">
+          <!-- Collapsible Speed trainer panel -->
+          <div class="control-group collapsible-panel" id="trainer-panel">
+            <div class="collapsible-header" id="trainer-toggle" role="button" tabindex="0">Speed trainer</div>
+            <div class="collapsible-body" id="trainer-body">
 
               <!-- Stage 0 -->
               <div class="trainer-stage" id="trainer-stage-0">
@@ -111,40 +150,6 @@
           </div>
         </section>
       </main>
-
-      <section class="exercise" id="exercise-view" hidden>
-        <div class="exercise-viewport" id="ex-viewport">
-          <img id="ex-img" alt="Current exercise" />
-          <button class="ex-nav ex-nav-prev" id="ex-prev" type="button" aria-label="Previous exercise">‹</button>
-          <button class="ex-nav ex-nav-next" id="ex-next" type="button" aria-label="Next exercise">›</button>
-          <div class="ex-progress-bar" id="ex-progress-bar" hidden>
-            <div class="ex-progress-fill" id="ex-progress-fill"></div>
-          </div>
-        </div>
-        <div class="exercise-caption" id="ex-caption"></div>
-        <div class="exercise-controls">
-          <label>Page
-            <select id="ex-page"></select>
-          </label>
-          <label>Topic
-            <select id="ex-topic"></select>
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="ex-auto" />
-            <span>Auto</span>
-          </label>
-          <input type="number" id="ex-auto-sec" min="2" max="120" value="20" aria-label="Auto-advance seconds" />
-          <span class="ex-unit">s</span>
-          <label class="toggle">
-            <input type="checkbox" id="ex-random" />
-            <span>Random</span>
-          </label>
-        </div>
-        <p class="exercise-empty" id="ex-empty" hidden>
-          No exercises yet. Add images and descriptors under
-          <code>public/content/</code> — see <code>HOWTO.md</code>.
-        </p>
-      </section>
 
       <footer class="page-bottom">
         <div class="control-group group-volume">

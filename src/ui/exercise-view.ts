@@ -40,11 +40,15 @@ export class ExerciseView {
   private readonly empty = byId<HTMLParagraphElement>('ex-empty');
   private readonly pageSel = byId<HTMLSelectElement>('ex-page');
   private readonly topicSel = byId<HTMLSelectElement>('ex-topic');
-  private readonly autoChk = byId<HTMLInputElement>('ex-auto');
+  private readonly autoToggle = byId<HTMLDivElement>('ex-auto-toggle');
   private readonly autoSec = byId<HTMLInputElement>('ex-auto-sec');
   private readonly randomChk = byId<HTMLInputElement>('ex-random');
+  private readonly autoPanel = byId<HTMLDivElement>('ex-auto-panel');
   private readonly progressBar = byId<HTMLDivElement>('ex-progress-bar');
   private readonly progressFill = byId<HTMLDivElement>('ex-progress-fill');
+
+  /** Last known autoSec before the user turned auto off (so we can restore it). */
+  private lastAutoSec = 20;
 
   private readonly store: Store;
 
@@ -55,8 +59,9 @@ export class ExerciseView {
     this.pageSel.addEventListener('change', () => this.setFilter({ page: this.pageSel.value }));
     this.topicSel.addEventListener('change', () => this.setFilter({ topic: this.topicSel.value }));
     this.randomChk.addEventListener('change', () => this.patch({ random: this.randomChk.checked }));
-    this.autoChk.addEventListener('change', () => this.applyAuto());
-    this.autoSec.addEventListener('change', () => this.applyAuto());
+    // Click the header to toggle auto-advance on/off
+    this.autoToggle.addEventListener('click', () => this.toggleAuto());
+    this.autoSec.addEventListener('change', () => this.applyAutoSec());
 
     // Re-frame the current item when the viewport width changes.
     if (typeof ResizeObserver !== 'undefined') {
@@ -171,9 +176,25 @@ export class ExerciseView {
     this.autoStartedAt = performance.now();
   }
 
-  private applyAuto(): void {
+  /** Toggle auto-advance on/off via the header click. */
+  private toggleAuto(): void {
+    const isOn = this.s().autoSec > 0;
+    if (isOn) {
+      // Turn off — remember the last value
+      this.lastAutoSec = this.s().autoSec;
+      this.patch({ autoSec: 0 });
+    } else {
+      // Turn on — restore last value or use the input
+      const sec = Math.max(2, Number(this.autoSec.value) || this.lastAutoSec);
+      this.patch({ autoSec: sec });
+    }
+  }
+
+  /** The seconds input changed while auto is on. */
+  private applyAutoSec(): void {
+    if (this.s().autoSec <= 0) return;
     const sec = Math.max(2, Number(this.autoSec.value) || 0);
-    this.patch({ autoSec: this.autoChk.checked ? sec : 0 });
+    this.patch({ autoSec: sec });
   }
 
   private stopAuto(): void {
@@ -280,8 +301,10 @@ export class ExerciseView {
     this.pageSel.value = s.page;
     this.topicSel.value = s.topic;
     this.randomChk.checked = s.random;
-    this.autoChk.checked = s.autoSec > 0;
-    if (document.activeElement !== this.autoSec && s.autoSec > 0) {
+    const autoOn = s.autoSec > 0;
+    // Collapse/expand the auto-advance panel
+    this.autoPanel.classList.toggle('collapsed', !autoOn);
+    if (document.activeElement !== this.autoSec && autoOn) {
       this.autoSec.value = String(s.autoSec);
     }
     this.syncAuto();

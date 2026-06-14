@@ -186,8 +186,8 @@ function syncStage(index: number, stage: TrainerStage): void {
 
 /** Bind the complete Speed Trainer block. */
 function bindTrainer(store: Store): void {
-  const trainerEnabled = byId<HTMLInputElement>('trainer-enabled');
-  const trainerBody = byId<HTMLDivElement>('trainer-body');
+  const trainerToggle = byId<HTMLDivElement>('trainer-toggle');
+  const trainerPanel = byId<HTMLDivElement>('trainer-panel');
   const addStageBtn = byId<HTMLButtonElement>('trainer-add-stage');
   const stage1El = byId<HTMLDivElement>('trainer-stage-1');
   const removeStageBtn = byId<HTMLButtonElement>('trainer-remove-stage');
@@ -202,8 +202,9 @@ function bindTrainer(store: Store): void {
     store.update({ trainer: { ...t, stages } });
   };
 
-  trainerEnabled.addEventListener('change', () =>
-    store.update({ trainer: { ...getT(), enabled: trainerEnabled.checked } }),
+  // Click the header to toggle enabled state
+  trainerToggle.addEventListener('click', () =>
+    store.update({ trainer: { ...getT(), enabled: !getT().enabled } }),
   );
 
   bindStage(0, store, () => getStage(0), (p) => setStage(0, p));
@@ -227,8 +228,8 @@ function bindTrainer(store: Store): void {
 
   const syncTrainer = (s: ReturnType<Store['get']>) => {
     const t = s.trainer;
-    trainerEnabled.checked = t.enabled;
-    trainerBody.classList.toggle('disabled', !t.enabled);
+    // Collapse/expand the panel based on enabled state
+    trainerPanel.classList.toggle('collapsed', !t.enabled);
 
     const stage0 = t.stages[0];
     syncStage(0, stage0);

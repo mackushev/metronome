@@ -452,6 +452,65 @@ body {
   color: var(--accent);
 }
 
+/* --- Collapsible panels (Speed trainer, Auto-advance) --- */
+
+.collapsible-panel {
+  transition: padding 0.25s ease, border-color 0.25s ease;
+}
+
+/* Collapsed state: thin strip with vertically centered label */
+.collapsible-panel.collapsed {
+  padding: 10px 14px;
+  border-color: var(--panel-border);
+}
+
+/* Active (expanded) state: highlighted green border */
+.collapsible-panel:not(.collapsed) {
+  border-color: var(--trainer);
+}
+
+.collapsible-header {
+  /* Match .group-label style */
+  display: flex;
+  align-items: center;
+  color: var(--dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+/* When active, header text turns green */
+.collapsible-panel:not(.collapsed) .collapsible-header {
+  color: var(--trainer);
+}
+
+.collapsible-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+  margin-top: 10px;
+  opacity: 1;
+}
+
+.collapsible-body > * {
+  /* Prevent content from overflowing during collapse */
+  min-height: 0;
+  overflow: hidden;
+}
+
+.collapsed .collapsible-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  margin-top: 0;
+  pointer-events: none;
+}
+
 /* --- Speed trainer --- */
 
 .toggle {
@@ -469,7 +528,7 @@ body {
 }
 
 .trainer-body {
-  margin-top: 10px;
+  /* margin-top handled by collapsible-body */
 }
 
 .trainer-body.disabled {
@@ -688,10 +747,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* When space allows, span the circle + speed-trainer panel width. */
+  /* On narrow screens: sits inside circle-col, full width of the column. */
   width: 100%;
-  max-width: 880px;
-  margin: 8px auto 0;
+  margin: 8px 0 0;
 }
 
 .exercise-viewport {
@@ -791,8 +849,9 @@ body {
 .exercise-caption {
   text-align: center;
   color: var(--dim);
-  font-size: 14px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  margin: -4px 0 -2px;
 }
 
 /* Bright countdown appended to the caption line when auto-advance is active */
@@ -870,6 +929,11 @@ body {
 
   .circle-col {
     width: min(44vw, 480px);
+  }
+
+  /* On desktop the exercise can stretch wider than the circle column */
+  .circle-col .exercise {
+    width: min(56vw, 640px);
   }
 
   .controls {
