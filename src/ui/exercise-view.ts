@@ -24,6 +24,15 @@ export class ExerciseView {
 
   private autoTimer: number | undefined;
 
+  /** Timestamp (ms) when the current auto-advance interval started. */
+  private autoStartedAt = 0;
+
+  /** requestAnimationFrame handle for the progress bar animation. */
+  private rafId: number | undefined;
+
+  /** Whether the metronome is currently playing. Auto-advance only runs while playing. */
+  private playing = false;
+
   private readonly root = byId<HTMLElement>('exercise-view');
   private readonly viewport = byId<HTMLDivElement>('ex-viewport');
   private readonly img = byId<HTMLImageElement>('ex-img');
@@ -34,6 +43,8 @@ export class ExerciseView {
   private readonly autoChk = byId<HTMLInputElement>('ex-auto');
   private readonly autoSec = byId<HTMLInputElement>('ex-auto-sec');
   private readonly randomChk = byId<HTMLInputElement>('ex-random');
+  private readonly progressBar = byId<HTMLDivElement>('ex-progress-bar');
+  private readonly progressFill = byId<HTMLDivElement>('ex-progress-fill');
 
   private readonly store: Store;
 
@@ -90,6 +101,17 @@ export class ExerciseView {
   hide(): void {
     this.root.hidden = true;
     this.stopAuto();
+    this.hideProgress();
+  }
+
+  /**
+   * Called from main.ts when the metronome starts or stops.
+   * Auto-advance only ticks while the metronome is playing;
+   * starting the metronome resets the countdown.
+   */
+  setPlaying(playing: boolean): void {
+    this.playing = playing;
+    this.syncAuto();
   }
 
   /** Items matching the current page/topic filter, in order. */
@@ -145,6 +167,8 @@ export class ExerciseView {
   private advanceOnce(): void {
     const target = pickNext(this.filtered(), this.s().currentId, this.s().random);
     if (target) this.patch({ currentId: target.id });
+    // Reset the progress timer for the next interval.
+    this.autoStartedAt = performance.now();
   }
 
   private applyAuto(): void {
@@ -155,13 +179,75 @@ export class ExerciseView {
   private stopAuto(): void {
     window.clearInterval(this.autoTimer);
     this.autoTimer = undefined;
+    this.stopProgressAnimation();
   }
 
   private syncAuto(): void {
     this.stopAuto();
     const sec = this.s().autoSec;
-    if (sec > 0 && !this.root.hidden) {
+    if (sec > 0 && !this.root.hidden && this.playing) {
+      this.autoStartedAt = performance.now();
       this.autoTimer = window.setInterval(() => this.advanceOnce(), sec * 1000);
+      this.showProgress();
+      this.startProgressAnimation();
+    } else {
+      this.hideProgress();
+    }
+  }
+
+  /* --- Progress bar & countdown animation --- */
+
+  private showProgress(): void {
+    this.progressBar.hidden = false;
+  }
+
+  private hideProgress(): void {
+    this.progressBar.hidden = true;
+    this.progressFill.style.width = '0%';
+    this.clearCountdownBadge();
+  }
+
+  /** Remove the countdown <span> from the caption if present. */
+  private clearCountdownBadge(): void {
+    const badge = this.caption.querySelector('.ex-countdown-badge');
+    if (badge) badge.remove();
+  }
+
+  /** Append or update the countdown badge inside the caption line. */
+  private setCountdownBadge(text: string): void {
+    let badge = this.caption.querySelector('.ex-countdown-badge') as HTMLSpanElement | null;
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'ex-countdown-badge';
+      this.caption.appendChild(badge);
+    }
+    badge.textContent = ` · ${text}`;
+  }
+
+  private startProgressAnimation(): void {
+    this.stopProgressAnimation();
+    const tick = () => {
+      const sec = this.s().autoSec;
+      if (sec <= 0) {
+        this.hideProgress();
+        return;
+      }
+      const elapsed = (performance.now() - this.autoStartedAt) / 1000;
+      const fraction = Math.min(elapsed / sec, 1);
+      const remaining = Math.max(0, sec - elapsed);
+
+      this.progressFill.style.width = `${(fraction * 100).toFixed(1)}%`;
+      this.setCountdownBadge(`${Math.ceil(remaining)}s`);
+
+      this.rafId = requestAnimationFrame(tick);
+    };
+    this.rafId = requestAnimationFrame(tick);
+  }
+
+  private stopProgressAnimation(): void {
+    if (this.rafId !== undefined) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = undefined;
     }
   }
 

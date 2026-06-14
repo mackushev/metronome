@@ -153,6 +153,7 @@ function togglePlay(): void {
   playIcon.textContent = engine.running ? '❚❚' : '▶';
   playBtn.classList.toggle('playing', engine.running);
   if (engine.running) maybeShowIosHint();
+  exerciseView.setPlaying(engine.running);
 }
 
 playBtn.addEventListener('click', togglePlay);

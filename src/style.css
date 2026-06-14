@@ -762,11 +762,43 @@ body {
   }
 }
 
+/* --- Auto-advance progress bar (inside viewport, bottom edge) --- */
+
+.ex-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ex-progress-bar[hidden] {
+  display: none;
+}
+
+.ex-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  opacity: 0.85;
+  border-radius: 0 3px 3px 0;
+  transition: none;
+}
+
 .exercise-caption {
   text-align: center;
   color: var(--dim);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Bright countdown appended to the caption line when auto-advance is active */
+.ex-countdown-badge {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .exercise-controls {

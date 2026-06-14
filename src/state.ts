@@ -131,9 +131,8 @@ function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
     currentId: typeof e.currentId === 'string' ? e.currentId : null,
     page: typeof e.page === 'string' ? e.page : fallback.page,
     topic: typeof e.topic === 'string' ? e.topic : fallback.topic,
-    // Always start with random and auto-advance off on page load
-    random: false,
-    autoSec: 0,
+    random: typeof e.random === 'boolean' ? e.random : fallback.random,
+    autoSec: typeof e.autoSec === 'number' && e.autoSec >= 0 ? e.autoSec : fallback.autoSec,
   };
 }
 
