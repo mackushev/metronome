@@ -44,8 +44,8 @@ function itemsFromSource(source: Source, startOrder: number): Item[] {
       image: spec.image ?? source.image.id,
       bbox,
       title: spec.title,
-      page: spec.page ?? source.page,
-      topic: spec.topic ?? source.topic,
+      page: spec.page == null ? source.page : String(spec.page),
+      topic: spec.topic == null ? source.topic : String(spec.topic),
       order: startOrder + index,
     });
   };
@@ -112,8 +112,8 @@ export function toSources(filename: string, file: DescriptorFile): Source[] {
   return groups.map((g, gi) => ({
     id: groups.length > 1 ? `${base}-${gi + 1}` : base,
     image: { id: g.image, src: `${CONTENT_DIR}/${g.image}`, w: g.w, h: g.h },
-    page: g.page,
-    topic: g.topic,
+    page: String(g.page),
+    topic: String(g.topic),
     items: g.items,
     grid: g.grid,
   }));

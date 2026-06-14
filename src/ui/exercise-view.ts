@@ -70,6 +70,7 @@ export class ExerciseView {
         .then((model) => {
           this.model = model;
           this.populatePickers();
+          this.resetStaleFilters();
           this.ensureCurrentInFilter();
           this.render();
         })
@@ -98,6 +99,21 @@ export class ExerciseView {
     if (!this.model || id === null) return null;
     const i = this.model.indexById.get(id);
     return i === undefined ? null : this.model.items[i];
+  }
+
+  /**
+   * Drop persisted page/topic filters that no longer exist in the loaded
+   * content. Without this, a stale filter from localStorage (e.g. page "1"
+   * from old content) produces an empty item list and the viewer shows
+   * "No exercises" even though the descriptors loaded fine.
+   */
+  private resetStaleFilters(): void {
+    if (!this.model) return;
+    const s = this.s();
+    const patch: Partial<ExerciseState> = {};
+    if (s.page && !this.model.itemsByPage.has(s.page)) patch.page = '';
+    if (s.topic && !this.model.itemsByTopic.has(s.topic)) patch.topic = '';
+    if (Object.keys(patch).length > 0) this.patch(patch);
   }
 
   /** Keep the shown item inside the active filter; fall back to its first item. */
