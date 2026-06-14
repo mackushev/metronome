@@ -51,7 +51,10 @@ export class ExerciseView {
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(() => this.render()).observe(this.viewport);
     }
-    this.store.subscribe(() => this.syncControls());
+    this.store.subscribe(() => {
+      this.syncControls();
+      this.render();
+    });
   }
 
   private s(): ExerciseState {
