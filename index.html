@@ -12,6 +12,7 @@
       <nav class="mode-switch" aria-label="View">
         <button class="mode-pill selected" id="mode-metronome" type="button">Metronome</button>
         <button class="mode-pill" id="mode-exercises" type="button">Exercises</button>
+        <button class="mode-pill" id="mode-polyrhythm" type="button">Polyrhythm</button>
       </nav>
       <main class="layout">
         <section class="circle-col">
@@ -140,6 +141,24 @@
 
               <div class="trainer-status" id="trainer-status"></div>
             </div>
+          </div>
+
+          <!-- Polyrhythm a-vs-b controls (shown only in polyrhythm mode) -->
+          <div class="control-group group-poly" id="poly-panel">
+            <div class="group-label">Polyrhythm</div>
+            <div class="poly-row">
+              <span class="poly-lbl poly-lbl-a">beats</span>
+              <button class="btn trainer-btn" id="poly-a-dec">−</button>
+              <span class="trainer-num" id="poly-a-num">3</span>
+              <button class="btn trainer-btn" id="poly-a-inc">+</button>
+            </div>
+            <div class="poly-row">
+              <span class="poly-lbl poly-lbl-b">ticks</span>
+              <button class="btn trainer-btn" id="poly-b-dec">−</button>
+              <span class="trainer-num" id="poly-b-num">2</span>
+              <button class="btn trainer-btn" id="poly-b-inc">+</button>
+            </div>
+            <div class="poly-ratio" id="poly-ratio">3 : 2</div>
           </div>
 
           <div class="control-group group-sound">

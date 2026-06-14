@@ -4,6 +4,26 @@ export type SoundName = 'click' | 'beep' | 'cowbell';
 /** Loudness of subdivision clicks relative to beats */
 export type ClickVolume = 'soft' | 'medium' | 'equal';
 
+/** The three top-level page modes (the tabs at the top). */
+export type AppMode = 'metronome' | 'exercises' | 'polyrhythm';
+
+/**
+ * Polyrhythm: two independent pulse streams that share one cycle (the full
+ * circle). Rhythm A ("beats") fires `a` evenly-spaced pulses per cycle, rhythm
+ * B ("ticks") fires `b` of them in the very same span of time. Either pulse can
+ * be individually muted.
+ */
+export interface PolyrhythmSettings {
+  /** Number of pulses in rhythm A ("beats") per cycle */
+  a: number;
+  /** Number of pulses in rhythm B ("ticks") per cycle */
+  b: number;
+  /** Indices of muted pulses in rhythm A */
+  mutedA: number[];
+  /** Indices of muted pulses in rhythm B */
+  mutedB: number[];
+}
+
 export interface TrainerStage {
   deltaSec: number;
   stepBpm: number;
@@ -31,6 +51,8 @@ export interface ExerciseState {
 }
 
 export interface Settings {
+  /** Active top-level page mode (selected by the tabs at the top) */
+  mode: AppMode;
   bpm: number;
   /** Number of beats per measure */
   beats: number;
@@ -47,6 +69,7 @@ export interface Settings {
   beatStates: BeatState[];
   trainer: TrainerSettings;
   exercise: ExerciseState;
+  polyrhythm: PolyrhythmSettings;
 }
 
 export const BPM_MIN = 20;
@@ -54,6 +77,9 @@ export const BPM_MAX = 300;
 export const BEATS_MIN = 1;
 export const BEATS_MAX = 8;
 export const SUBDIVISIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+/** Polyrhythm pulse counts: each rhythm fires 1..9 evenly spaced pulses per cycle */
+export const POLY_MIN = 1;
+export const POLY_MAX = 9;
 export const SOUNDS: { name: SoundName; label: string }[] = [
   { name: 'click', label: 'Click' },
   { name: 'beep', label: 'Beep' },
@@ -93,6 +119,11 @@ export function toggleSubMute(mutedSubs: string[], beatIndex: number, subIndex: 
   return mutedSubs.includes(key) ? mutedSubs.filter((k) => k !== key) : [...mutedSubs, key];
 }
 
+/** Toggle a numeric index in a muted-pulse list (used by the polyrhythm rings) */
+export function togglePolyMute(muted: number[], index: number): number[] {
+  return muted.includes(index) ? muted.filter((i) => i !== index) : [...muted, index];
+}
+
 export function cycleBeatState(state: BeatState): BeatState {
   switch (state) {
     case 'normal':
@@ -110,6 +141,7 @@ const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: null };
 
 export function defaultSettings(): Settings {
   return {
+    mode: 'metronome',
     bpm: 120,
     beats: 4,
     subdivision: 1,
@@ -120,7 +152,26 @@ export function defaultSettings(): Settings {
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
     exercise: { enabled: false, currentId: null, page: '', topic: '', random: false, autoSec: 0 },
+    polyrhythm: { a: 3, b: 2, mutedA: [], mutedB: [] },
   };
+}
+
+function parsePolyrhythm(raw: unknown, fallback: PolyrhythmSettings): PolyrhythmSettings {
+  const p = raw as Record<string, unknown> | undefined;
+  if (!p) return fallback;
+  const clampCount = (v: unknown, def: number): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(POLY_MAX, Math.max(POLY_MIN, Math.round(n))) : def;
+  };
+  const a = clampCount(p.a, fallback.a);
+  const b = clampCount(p.b, fallback.b);
+  const cleanMuted = (v: unknown, count: number): number[] =>
+    Array.isArray(v)
+      ? v
+          .map((x) => Number(x))
+          .filter((x) => Number.isInteger(x) && x >= 0 && x < count)
+      : [];
+  return { a, b, mutedA: cleanMuted(p.mutedA, a), mutedB: cleanMuted(p.mutedB, b) };
 }
 
 function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
@@ -174,7 +225,18 @@ export function loadSettings(): Settings {
       trainer = fallback.trainer;
     }
 
+    const exercise = parseExercise(parsed.exercise, fallback.exercise);
+    // Derive the mode: prefer an explicit field, else fall back to the legacy
+    // exercise.enabled flag from before polyrhythm existed.
+    const validModes: AppMode[] = ['metronome', 'exercises', 'polyrhythm'];
+    const mode: AppMode = validModes.includes(parsed.mode as AppMode)
+      ? (parsed.mode as AppMode)
+      : exercise.enabled
+        ? 'exercises'
+        : 'metronome';
+
     return {
+      mode,
       bpm: clampBpm(Number(parsed.bpm) || fallback.bpm),
       beats,
       subdivision: (SUBDIVISIONS as readonly number[]).includes(Number(parsed.subdivision))
@@ -195,7 +257,8 @@ export function loadSettings(): Settings {
         beats,
       ),
       trainer,
-      exercise: parseExercise(parsed.exercise, fallback.exercise),
+      exercise,
+      polyrhythm: parsePolyrhythm(parsed.polyrhythm, fallback.polyrhythm),
     };
   } catch {
     return fallback;

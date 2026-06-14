@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { advance, tickKind } from './audio/engine';
+import { advance, polyEventsForCycle, tickKind } from './audio/engine';
 import {
   cycleBeatState,
   defaultBeatStates,
   defaultSettings,
   resizeBeatStates,
   toggleSubMute,
+  togglePolyMute,
   type Settings,
 } from './state';
 import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
@@ -152,5 +153,34 @@ describe('speed trainer', () => {
     expect(trainerTargetBpm(100, 75, two)).toBe(140);
     expect(trainerAtMax(200, 100, two)).toBe(true);
     expect(trainerAtMax(150, 100, two)).toBe(false);
+  });
+});
+
+describe('polyrhythm: cycle events', () => {
+  it('a 3:2 cycle yields five pulses sorted by position, sharing the downbeat', () => {
+    const events = polyEventsForCycle(3, 2);
+    expect(events).toHaveLength(5);
+    // Both rhythms fire at offset 0; rhythm A reads first on the tie
+    expect(events[0]).toEqual({ rhythm: 'a', index: 0, offset: 0 });
+    expect(events[1]).toEqual({ rhythm: 'b', index: 0, offset: 0 });
+    // The rest are sorted by their position around the cycle
+    const offsets = events.map((e) => e.offset);
+    expect(offsets).toEqual([...offsets].sort((x, y) => x - y));
+  });
+
+  it('each rhythm contributes exactly its own pulse count', () => {
+    const events = polyEventsForCycle(4, 3);
+    expect(events.filter((e) => e.rhythm === 'a')).toHaveLength(4);
+    expect(events.filter((e) => e.rhythm === 'b')).toHaveLength(3);
+    // Pulses are evenly spaced within each rhythm
+    expect(events.filter((e) => e.rhythm === 'a').map((e) => e.offset)).toEqual([0, 0.25, 0.5, 0.75]);
+  });
+});
+
+describe('togglePolyMute', () => {
+  it('toggles a single pulse index on and off', () => {
+    expect(togglePolyMute([], 2)).toEqual([2]);
+    expect(togglePolyMute([2], 2)).toEqual([]);
+    expect(togglePolyMute([0, 2], 1)).toEqual([0, 2, 1]);
   });
 });

@@ -1,6 +1,17 @@
 import './style.css';
 import { MetronomeEngine } from './audio/engine';
-import { clampBpm, loadSettings, resizeBeatStates, Store, cycleBeatState, toggleSubMute } from './state';
+import {
+  clampBpm,
+  loadSettings,
+  resizeBeatStates,
+  Store,
+  cycleBeatState,
+  toggleSubMute,
+  togglePolyMute,
+  POLY_MIN,
+  POLY_MAX,
+  type AppMode,
+} from './state';
 import {
   currentStageStepBpm,
   secondsToNextStep,
@@ -37,6 +48,16 @@ const circle = new CircleView(svg, {
   onSubToggle: (beatIndex, subIndex) => {
     store.update({ mutedSubs: toggleSubMute(store.get().mutedSubs, beatIndex, subIndex) });
   },
+  onPolyToggleA: (index) => {
+    const p = store.get().polyrhythm;
+    store.update({ polyrhythm: { ...p, mutedA: togglePolyMute(p.mutedA, index) } });
+  },
+  onPolyToggleB: (index) => {
+    const p = store.get().polyrhythm;
+    store.update({ polyrhythm: { ...p, mutedB: togglePolyMute(p.mutedB, index) } });
+  },
+  onPolySelectA: (count) => setPolyCountTo('a', count),
+  onPolySelectB: (count) => setPolyCountTo('b', count),
 });
 
 const beatBarEl = document.getElementById('beat-bar')!;
@@ -117,34 +138,75 @@ bindControls(store, {
   onSoundPreview: (kind) => engine.preview(kind ?? 'normal'),
 });
 
-// --- Metronome / Exercises mode switch: the two pills reshape the page ---
+// --- Mode switch: the three pills reshape the page ---
 const exerciseView = new ExerciseView(store);
 const appEl = document.getElementById('app')!;
 const modeMetronome = document.getElementById('mode-metronome') as HTMLButtonElement;
 const modeExercises = document.getElementById('mode-exercises') as HTMLButtonElement;
+const modePolyrhythm = document.getElementById('mode-polyrhythm') as HTMLButtonElement;
 
-function syncExerciseMode(): void {
-  const on = store.get().exercise.enabled;
-  appEl.classList.toggle('mode-exercises', on);
-  appEl.classList.toggle('mode-metronome', !on);
-  modeExercises.classList.toggle('selected', on);
-  modeMetronome.classList.toggle('selected', !on);
-  // In exercise mode the beat bar gives way to the practice sheet.
-  beatBarEl.hidden = on;
-  if (on) void exerciseView.show();
+function syncMode(): void {
+  const mode = store.get().mode;
+  appEl.classList.toggle('mode-metronome', mode === 'metronome');
+  appEl.classList.toggle('mode-exercises', mode === 'exercises');
+  appEl.classList.toggle('mode-polyrhythm', mode === 'polyrhythm');
+  modeMetronome.classList.toggle('selected', mode === 'metronome');
+  modeExercises.classList.toggle('selected', mode === 'exercises');
+  modePolyrhythm.classList.toggle('selected', mode === 'polyrhythm');
+  // The beat bar is only meaningful in metronome mode.
+  beatBarEl.hidden = mode !== 'metronome';
+  if (mode === 'exercises') void exerciseView.show();
   else exerciseView.hide();
+  // Render the right circle layout for the active mode.
+  if (mode === 'polyrhythm') circle.renderPoly(store.get());
+  else circle.render(store.get());
 }
 
-function setExerciseMode(on: boolean): void {
-  if (store.get().exercise.enabled !== on) {
-    store.update({ exercise: { ...store.get().exercise, enabled: on } });
+function setMode(mode: AppMode): void {
+  if (store.get().mode !== mode) {
+    // Keep the legacy exercise.enabled flag in sync for backward compatibility.
+    store.update({ mode, exercise: { ...store.get().exercise, enabled: mode === 'exercises' } });
   }
-  syncExerciseMode();
+  syncMode();
 }
 
-modeMetronome.addEventListener('click', () => setExerciseMode(false));
-modeExercises.addEventListener('click', () => setExerciseMode(true));
-syncExerciseMode();
+modeMetronome.addEventListener('click', () => setMode('metronome'));
+modeExercises.addEventListener('click', () => setMode('exercises'));
+modePolyrhythm.addEventListener('click', () => setMode('polyrhythm'));
+
+// --- Polyrhythm a/b steppers ---
+const polyANum = document.getElementById('poly-a-num')!;
+const polyBNum = document.getElementById('poly-b-num')!;
+const polyRatio = document.getElementById('poly-ratio')!;
+
+function setPolyCountTo(which: 'a' | 'b', value: number): void {
+  const p = store.get().polyrhythm;
+  const next = Math.min(POLY_MAX, Math.max(POLY_MIN, value));
+  if (next === p[which]) return;
+  // Drop muted indices that fall outside the new count.
+  const mutedKey = which === 'a' ? 'mutedA' : 'mutedB';
+  const muted = (p[mutedKey] as number[]).filter((i) => i < next);
+  store.update({ polyrhythm: { ...p, [which]: next, [mutedKey]: muted } });
+}
+
+function setPolyCount(which: 'a' | 'b', delta: number): void {
+  setPolyCountTo(which, store.get().polyrhythm[which] + delta);
+}
+
+document.getElementById('poly-a-dec')!.addEventListener('click', () => setPolyCount('a', -1));
+document.getElementById('poly-a-inc')!.addEventListener('click', () => setPolyCount('a', +1));
+document.getElementById('poly-b-dec')!.addEventListener('click', () => setPolyCount('b', -1));
+document.getElementById('poly-b-inc')!.addEventListener('click', () => setPolyCount('b', +1));
+
+function syncPolyControls(): void {
+  const { a, b } = store.get().polyrhythm;
+  polyANum.textContent = String(a);
+  polyBNum.textContent = String(b);
+  polyRatio.textContent = `${a} : ${b}`;
+}
+
+syncMode();
+syncPolyControls();
 
 // --- Start/stop ---
 function togglePlay(): void {
@@ -185,8 +247,10 @@ center.addEventListener('pointercancel', endDrag);
 let prevTrainer = JSON.stringify(store.get().trainer);
 store.subscribe((s) => {
   bpmValue.textContent = String(s.bpm);
-  circle.render(s);
+  if (s.mode === 'polyrhythm') circle.renderPoly(s);
+  else circle.render(s);
   beatBar.render(s);
+  syncPolyControls();
   // Restart the trainer countdown only when its own parameters change
   const trainerNow = JSON.stringify(s.trainer);
   if (trainerNow !== prevTrainer) {
@@ -195,11 +259,18 @@ store.subscribe((s) => {
   }
 });
 bpmValue.textContent = String(store.get().bpm);
-circle.render(store.get());
+if (store.get().mode === 'polyrhythm') circle.renderPoly(store.get());
+else circle.render(store.get());
 beatBar.render(store.get());
 
 // --- Frame loop: needle, tick highlight, trainer progress ---
 function frame(): void {
+  if (store.get().mode === 'polyrhythm') {
+    circle.polyTick(engine.polyPosition());
+    circle.setTrainerProgress(null);
+    requestAnimationFrame(frame);
+    return;
+  }
   const pos = engine.position();
   circle.tick(pos);
   beatBar.setActive(pos ? pos.beatIndex : null);

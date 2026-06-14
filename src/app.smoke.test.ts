@@ -123,6 +123,59 @@ describe('smoke: the app mounts', () => {
     expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(false);
   });
 
+  it('the Polyrhythm pill shows two rings of dots and hides the beat bar', () => {
+    (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
+    expect(document.getElementById('app')!.classList.contains('mode-polyrhythm')).toBe(true);
+    expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(true);
+    // default 3 : 2 — three outer "a" dots and two inner "b" dots
+    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(3);
+    expect(document.querySelectorAll('#circle .dot-poly-b').length).toBe(2);
+    // back to the metronome restores its dots
+    (document.getElementById('mode-metronome') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(0);
+    expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(false);
+  });
+
+  it('polyrhythm steppers change the pulse counts and rings', () => {
+    (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
+    (document.getElementById('poly-a-inc') as HTMLButtonElement).click();
+    expect(document.getElementById('poly-a-num')!.textContent).toBe('4');
+    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(4);
+    (document.getElementById('poly-a-dec') as HTMLButtonElement).click();
+    expect(document.getElementById('poly-a-num')!.textContent).toBe('3');
+    (document.getElementById('mode-metronome') as HTMLButtonElement).click();
+  });
+
+  it('polyrhythm outer arcs set the two pulse counts and fill up to the value', () => {
+    (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
+    // Rhythm A arc (right): 9 selectable dots
+    const aDots = document.querySelectorAll('#circle .sel-dot.sel-poly-a');
+    expect(aDots.length).toBe(9);
+    // Each selector renders as dot, num, hit — tap the hit whose dot is poly-a, value 5
+    const polyAHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
+      h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-a'),
+    );
+    polyAHits[4].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(document.getElementById('poly-a-num')!.textContent).toBe('5');
+    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(5);
+    // The arc fills the first five dots
+    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a.filled').length).toBe(5);
+    (document.getElementById('mode-metronome') as HTMLButtonElement).click();
+  });
+
+  it('tapping a polyrhythm dot mutes only that single pulse', () => {
+    (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
+    let aDots = document.querySelectorAll('#circle .dot-poly-a');
+    aDots[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    aDots = document.querySelectorAll('#circle .dot-poly-a');
+    expect(aDots[1].classList.contains('muted')).toBe(true);
+    expect(aDots[0].classList.contains('muted')).toBe(false);
+    aDots[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    aDots = document.querySelectorAll('#circle .dot-poly-a');
+    expect(aDots[1].classList.contains('muted')).toBe(false);
+    (document.getElementById('mode-metronome') as HTMLButtonElement).click();
+  });
+
   it('trainer: every button updates the displayed value', () => {
     const incBtn = document.getElementById('t0-delta-inc') as HTMLButtonElement;
     const decBtn = document.getElementById('t0-delta-dec') as HTMLButtonElement;

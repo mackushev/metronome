@@ -242,6 +242,29 @@ body {
   fill: var(--accent);
 }
 
+/* Polyrhythm outer arcs: right = rhythm A (beats), left = rhythm B (ticks).
+   Colors mirror the two dot rings (A = accent, B = beat). */
+.sel-dot.filled.sel-poly-a {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+.sel-dot.filled.sel-poly-b {
+  fill: var(--beat);
+  stroke: var(--beat);
+}
+.sel-band.band-poly-a {
+  stroke: var(--accent);
+}
+.sel-band.band-poly-b {
+  stroke: var(--beat);
+}
+.sel-zone-label.band-poly-a {
+  fill: var(--accent);
+}
+.sel-zone-label.band-poly-b {
+  fill: var(--beat);
+}
+
 /* --- Tempo dial --- */
 
 .dial-track {
@@ -735,6 +758,87 @@ body {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 18%, var(--bg));
   color: var(--accent);
+}
+
+/* --- Polyrhythm mode: panel visibility --- */
+
+/* The polyrhythm a/b panel only shows in polyrhythm mode */
+.group-poly {
+  display: none;
+}
+.mode-polyrhythm .group-poly {
+  display: block;
+}
+/* The speed trainer is metronome-specific — hide it in polyrhythm mode */
+.mode-polyrhythm #trainer-panel {
+  display: none;
+}
+
+.group-poly .group-label {
+  margin-bottom: 6px;
+}
+
+.poly-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.poly-lbl {
+  width: 52px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.poly-lbl-a {
+  color: var(--accent);
+}
+.poly-lbl-b {
+  color: var(--beat);
+}
+
+.poly-ratio {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+
+/* --- Polyrhythm circle dots --- */
+
+/* Rhythm A pulses (outer ring): the "beats" */
+.dot-poly-a {
+  fill: var(--accent);
+  stroke: transparent;
+  stroke-width: 2.5;
+}
+.dot-poly-a.accent {
+  r: 14;
+  stroke: var(--accent);
+}
+/* Rhythm B pulses (inner ring): the "ticks" */
+.dot-poly-b {
+  fill: var(--beat);
+  stroke: transparent;
+  stroke-width: 14;
+  cursor: pointer;
+}
+.dot-poly-a.muted,
+.dot-poly-b.muted {
+  fill: transparent;
+  stroke: var(--dim);
+  stroke-width: 2;
+  opacity: 0.6;
+}
+.dot-poly-a.active,
+.dot-poly-b.active {
+  fill: var(--active);
+  stroke: var(--active);
+}
+.poly-inner-ring {
+  opacity: 0.4;
 }
 
 /* --- Exercise viewer: full-width practice sheet below the metronome --- */

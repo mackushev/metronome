@@ -1,10 +1,12 @@
-import { BEATS_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
+import { BEATS_MAX, POLY_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW = 360;
 const CX = VIEW / 2;
 const CY = VIEW / 2;
 const DOT_RING_R = 138;
+/** Inner ring radius for rhythm B in polyrhythm mode */
+const POLY_B_RING_R = 104;
 const NEEDLE_R = 112;
 const TRAINER_RING_R = 152;
 const DIAL_R = 100;
@@ -86,6 +88,14 @@ export interface CircleCallbacks {
   onSubdivSelect: (subdivision: number) => void;
   /** Tap on a subdivision dot: mute/unmute that single ghost click */
   onSubToggle: (beatIndex: number, subIndex: number) => void;
+  /** Polyrhythm: tap a pulse on rhythm A's ring to mute/unmute it */
+  onPolyToggleA: (index: number) => void;
+  /** Polyrhythm: tap a pulse on rhythm B's ring to mute/unmute it */
+  onPolyToggleB: (index: number) => void;
+  /** Polyrhythm: tap an outer dot on the right to set rhythm A's pulse count */
+  onPolySelectA: (count: number) => void;
+  /** Polyrhythm: tap an outer dot on the left to set rhythm B's pulse count */
+  onPolySelectB: (count: number) => void;
 }
 
 interface SelectorDot {
@@ -116,6 +126,17 @@ export class CircleView {
   private subdivision = 0;
   private activeIndex = -1;
 
+  // Polyrhythm rendering state
+  private polyMode = false;
+  private polyDotsA: SVGCircleElement[] = [];
+  private polyDotsB: SVGCircleElement[] = [];
+  private polyKey = '';
+  private polyActiveA = -1;
+  private polyActiveB = -1;
+  private selPolyA: SelectorDot[] = [];
+  private selPolyB: SelectorDot[] = [];
+  private selPolyDecor: SVGElement[] = [];
+
   private readonly svg: SVGSVGElement;
   private readonly callbacks: CircleCallbacks;
 
@@ -143,23 +164,36 @@ export class CircleView {
     this.dialHit.addEventListener('pointercancel', () => (this.dialDrag = null));
     this.buildDialArrows();
 
-    this.buildSelectorBands();
+    this.selDecor = this.buildSelectorBands([
+      ['band-beats', +1, 'beats'],
+      ['band-subdiv', -1, 'clicks'],
+    ]);
     this.selBeats = this.buildSelector(BEATS_MAX, 'sel-beats', +1, (value) =>
       this.callbacks.onBeatsSelect(value),
     );
     this.selSubdiv = this.buildSelector(SUBDIVISIONS.length, 'sel-subdiv', -1, (value) =>
       this.callbacks.onSubdivSelect(value),
     );
+
+    // Polyrhythm: the same outer arcs select the two pulse counts (a / b)
+    this.selPolyDecor = this.buildSelectorBands([
+      ['band-poly-a', +1, 'beats'],
+      ['band-poly-b', -1, 'ticks'],
+    ]);
+    this.selPolyA = this.buildSelector(POLY_MAX, 'sel-poly-a', +1, (value) =>
+      this.callbacks.onPolySelectA(value),
+    );
+    this.selPolyB = this.buildSelector(POLY_MAX, 'sel-poly-b', -1, (value) =>
+      this.callbacks.onPolySelectB(value),
+    );
   }
 
   // --- Outer selector dots ---
 
   /** Colored sector backdrop arcs; labels curve along the circle at the sector tops */
-  private buildSelectorBands(): void {
-    for (const [cls, side, label] of [
-      ['band-beats', +1, 'beats'],
-      ['band-subdiv', -1, 'clicks'],
-    ] as const) {
+  private buildSelectorBands(specs: readonly (readonly [string, 1 | -1, string])[]): SVGElement[] {
+    const decor: SVGElement[] = [];
+    for (const [cls, side, label] of specs) {
       const band = el('path', {
         class: `sel-band ${cls}`,
         d: arcPath(SELECTOR_R, selectorAngle(side, BAND_FROM_DEG), selectorAngle(side, BAND_TO_DEG)),
@@ -176,8 +210,9 @@ export class CircleView {
       textPath.setAttribute('text-anchor', 'middle');
       textPath.textContent = label;
       text.append(textPath);
-      this.selDecor.push(band, labelPath, text);
+      decor.push(band, labelPath, text);
     }
+    return decor;
   }
 
   /** Arc of count dots; side=+1 — right half (clockwise), -1 — left half */
@@ -265,6 +300,12 @@ export class CircleView {
   /** Rebuilds the dots to match the current settings (call on every change) */
   render(settings: Settings): void {
     const { beats, subdivision, beatStates, mutedSubs } = settings;
+    if (this.polyMode) {
+      // Leaving polyrhythm mode: force a full metronome rebuild
+      this.polyMode = false;
+      this.beats = 0;
+      this.subdivision = 0;
+    }
     if (beats !== this.beats || subdivision !== this.subdivision) {
       this.rebuild(beats, subdivision);
     }
@@ -327,6 +368,102 @@ export class CircleView {
       }
       this.svg.append(dot);
       this.dots.push(dot);
+    }
+  }
+
+  /** Renders the two polyrhythm rings (call on every change in polyrhythm mode) */
+  renderPoly(settings: Settings): void {
+    const { a, b, mutedA, mutedB } = settings.polyrhythm;
+    const key = `${a}:${b}`;
+    if (!this.polyMode || key !== this.polyKey) {
+      this.rebuildPoly(a, b);
+      this.polyKey = key;
+    }
+    this.polyDotsA.forEach((dot, i) => {
+      const muted = mutedA.includes(i) ? ' muted' : '';
+      const accent = i === 0 ? ' accent' : '';
+      const active = i === this.polyActiveA ? ' active' : '';
+      dot.setAttribute('class', `dot dot-beat dot-poly-a${accent}${muted}${active}`);
+    });
+    this.polyDotsB.forEach((dot, i) => {
+      const muted = mutedB.includes(i) ? ' muted' : '';
+      const active = i === this.polyActiveB ? ' active' : '';
+      dot.setAttribute('class', `dot dot-poly-b${muted}${active}`);
+    });
+    this.renderSelector(this.selPolyA, a);
+    this.renderSelector(this.selPolyB, b);
+  }
+
+  private rebuildPoly(a: number, b: number): void {
+    this.polyMode = true;
+    this.beats = 0;
+    this.subdivision = 0;
+    this.activeIndex = -1;
+    this.polyActiveA = -1;
+    this.polyActiveB = -1;
+    this.svg.replaceChildren();
+    this.dots = [];
+    this.polyDotsA = [];
+    this.polyDotsB = [];
+
+    this.svg.append(
+      el('circle', { class: 'base-ring', cx: CX, cy: CY, r: DOT_RING_R }),
+      el('circle', { class: 'base-ring poly-inner-ring', cx: CX, cy: CY, r: POLY_B_RING_R }),
+      this.needle,
+    );
+    // Outer arc selectors for the two pulse counts (right = a/beats, left = b/ticks)
+    this.svg.append(...this.selPolyDecor);
+    for (const { dot, num, hit } of [...this.selPolyA, ...this.selPolyB]) {
+      this.svg.append(dot, num, hit);
+    }
+
+    // Rhythm A on the outer ring (the "beats")
+    for (let i = 0; i < a; i++) {
+      const { x, y } = polar(DOT_RING_R, tickAngle(i, a));
+      const dot = el('circle', { class: 'dot dot-beat dot-poly-a', cx: x, cy: y, r: 11 });
+      dot.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        this.callbacks.onPolyToggleA(i);
+      });
+      this.svg.append(dot);
+      this.polyDotsA.push(dot);
+    }
+    // Rhythm B on the inner ring (the "ticks")
+    for (let j = 0; j < b; j++) {
+      const { x, y } = polar(POLY_B_RING_R, tickAngle(j, b));
+      const dot = el('circle', { class: 'dot dot-poly-b', cx: x, cy: y, r: 8 });
+      dot.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        this.callbacks.onPolyToggleB(j);
+      });
+      this.svg.append(dot);
+      this.polyDotsB.push(dot);
+    }
+  }
+
+  /** Polyrhythm animation update; readout = null when stopped */
+  polyTick(readout: { phase: number; aIndex: number; bIndex: number } | null): void {
+    if (!readout) {
+      this.setPolyActive(-1, -1);
+      this.needle.style.visibility = 'hidden';
+      return;
+    }
+    this.setPolyActive(readout.aIndex, readout.bIndex);
+    const angle = readout.phase * 360;
+    this.needle.setAttribute('transform', `rotate(${angle} ${CX} ${CY})`);
+    this.needle.style.visibility = 'visible';
+  }
+
+  private setPolyActive(aIndex: number, bIndex: number): void {
+    if (aIndex !== this.polyActiveA) {
+      if (this.polyActiveA >= 0) this.polyDotsA[this.polyActiveA]?.classList.remove('active');
+      if (aIndex >= 0) this.polyDotsA[aIndex]?.classList.add('active');
+      this.polyActiveA = aIndex;
+    }
+    if (bIndex !== this.polyActiveB) {
+      if (this.polyActiveB >= 0) this.polyDotsB[this.polyActiveB]?.classList.remove('active');
+      if (bIndex >= 0) this.polyDotsB[bIndex]?.classList.add('active');
+      this.polyActiveB = bIndex;
     }
   }
 
