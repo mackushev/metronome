@@ -1,4 +1,4 @@
-import { BEATS_MAX, POLY_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
+import { BEATS_MAX, POLY_A_MAX, POLY_B_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW = 360;
@@ -180,11 +180,15 @@ export class CircleView {
       ['band-poly-a', +1, 'beats'],
       ['band-poly-b', -1, 'ticks'],
     ]);
-    this.selPolyA = this.buildSelector(POLY_MAX, 'sel-poly-a', +1, (value) =>
+    this.selPolyA = this.buildSelector(POLY_A_MAX, 'sel-poly-a', +1, (value) =>
       this.callbacks.onPolySelectA(value),
     );
-    this.selPolyB = this.buildSelector(POLY_MAX, 'sel-poly-b', -1, (value) =>
-      this.callbacks.onPolySelectB(value),
+    this.selPolyB = this.buildSelector(
+      POLY_B_MAX,
+      'sel-poly-b',
+      -1,
+      (value) => this.callbacks.onPolySelectB(value),
+      8,
     );
   }
 
@@ -215,18 +219,22 @@ export class CircleView {
     return decor;
   }
 
-  /** Arc of count dots; side=+1 — right half (clockwise), -1 — left half */
+  /** Arc of count dots; side=+1 — right half (clockwise), -1 — left half.
+      step defaults to SELECTOR_STEP_DEG; pass a smaller one to fit many dots. */
   private buildSelector(
     count: number,
     cls: string,
     side: 1 | -1,
     onSelect: (value: number) => void,
+    step: number = SELECTOR_STEP_DEG,
   ): SelectorDot[] {
+    // Shrink dots a touch when they are densely packed
+    const r = step < SELECTOR_STEP_DEG ? 4.5 : 6;
     const result: SelectorDot[] = [];
     for (let value = 1; value <= count; value++) {
-      const deg = selectorAngle(side, SELECTOR_OFFSET_DEG + (value - 1) * SELECTOR_STEP_DEG);
+      const deg = selectorAngle(side, SELECTOR_OFFSET_DEG + (value - 1) * step);
       const { x, y } = polar(SELECTOR_R, deg);
-      const dot = el('circle', { class: `sel-dot ${cls}`, cx: x, cy: y, r: 6 });
+      const dot = el('circle', { class: `sel-dot ${cls}`, cx: x, cy: y, r });
       const num = el('text', { class: 'sel-num', x, y, dy: '0.34em' });
       num.textContent = String(value);
       const hit = el('circle', { class: 'sel-hit', cx: x, cy: y, r: 13 });

@@ -148,18 +148,24 @@ describe('smoke: the app mounts', () => {
 
   it('polyrhythm outer arcs set the two pulse counts and fill up to the value', () => {
     (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
-    // Rhythm A arc (right): 9 selectable dots
-    const aDots = document.querySelectorAll('#circle .sel-dot.sel-poly-a');
-    expect(aDots.length).toBe(9);
-    // Each selector renders as dot, num, hit — tap the hit whose dot is poly-a, value 5
+    // Rhythm A arc (right): 4 dots (beats max), rhythm B arc (left): 15 dots (ticks max)
+    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a').length).toBe(4);
+    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-b').length).toBe(15);
+    // Each selector renders as dot, num, hit — tap the hit whose dot is poly-a, value 4
     const polyAHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
       h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-a'),
     );
-    polyAHits[4].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    expect(document.getElementById('poly-a-num')!.textContent).toBe('5');
-    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(5);
-    // The arc fills the first five dots
-    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a.filled').length).toBe(5);
+    polyAHits[3].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(document.getElementById('poly-a-num')!.textContent).toBe('4');
+    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(4);
+    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a.filled').length).toBe(4);
+    // Rhythm B can climb high — tap value 12 on the left arc
+    const polyBHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
+      h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-b'),
+    );
+    polyBHits[11].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(document.getElementById('poly-b-num')!.textContent).toBe('12');
+    expect(document.querySelectorAll('#circle .dot-poly-b').length).toBe(12);
     (document.getElementById('mode-metronome') as HTMLButtonElement).click();
   });
 

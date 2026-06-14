@@ -9,7 +9,8 @@ import {
   toggleSubMute,
   togglePolyMute,
   POLY_MIN,
-  POLY_MAX,
+  POLY_A_MAX,
+  POLY_B_MAX,
   type AppMode,
 } from './state';
 import {
@@ -181,7 +182,8 @@ const polyRatio = document.getElementById('poly-ratio')!;
 
 function setPolyCountTo(which: 'a' | 'b', value: number): void {
   const p = store.get().polyrhythm;
-  const next = Math.min(POLY_MAX, Math.max(POLY_MIN, value));
+  const max = which === 'a' ? POLY_A_MAX : POLY_B_MAX;
+  const next = Math.min(max, Math.max(POLY_MIN, value));
   if (next === p[which]) return;
   // Drop muted indices that fall outside the new count.
   const mutedKey = which === 'a' ? 'mutedA' : 'mutedB';

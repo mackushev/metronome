@@ -77,9 +77,13 @@ export const BPM_MAX = 300;
 export const BEATS_MIN = 1;
 export const BEATS_MAX = 8;
 export const SUBDIVISIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-/** Polyrhythm pulse counts: each rhythm fires 1..9 evenly spaced pulses per cycle */
+/** Polyrhythm pulse counts. Rhythm A ("beats") stays small and readable; rhythm
+    B ("ticks") may pack many more pulses into the same cycle. */
 export const POLY_MIN = 1;
-export const POLY_MAX = 9;
+/** Max pulses in rhythm A ("beats") */
+export const POLY_A_MAX = 4;
+/** Max pulses in rhythm B ("ticks") */
+export const POLY_B_MAX = 15;
 export const SOUNDS: { name: SoundName; label: string }[] = [
   { name: 'click', label: 'Click' },
   { name: 'beep', label: 'Beep' },
@@ -159,12 +163,12 @@ export function defaultSettings(): Settings {
 function parsePolyrhythm(raw: unknown, fallback: PolyrhythmSettings): PolyrhythmSettings {
   const p = raw as Record<string, unknown> | undefined;
   if (!p) return fallback;
-  const clampCount = (v: unknown, def: number): number => {
+  const clampCount = (v: unknown, def: number, max: number): number => {
     const n = Number(v);
-    return Number.isFinite(n) ? Math.min(POLY_MAX, Math.max(POLY_MIN, Math.round(n))) : def;
+    return Number.isFinite(n) ? Math.min(max, Math.max(POLY_MIN, Math.round(n))) : def;
   };
-  const a = clampCount(p.a, fallback.a);
-  const b = clampCount(p.b, fallback.b);
+  const a = clampCount(p.a, fallback.a, POLY_A_MAX);
+  const b = clampCount(p.b, fallback.b, POLY_B_MAX);
   const cleanMuted = (v: unknown, count: number): number[] =>
     Array.isArray(v)
       ? v
