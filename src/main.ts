@@ -1,5 +1,6 @@
 import './style.css';
 import { MetronomeEngine } from './audio/engine';
+import { modeFromUrl, pushMode, replaceMode, onPopState } from './router';
 import {
   clampBpm,
   loadSettings,
@@ -25,8 +26,21 @@ import { CircleView } from './ui/circle';
 import { bindControls } from './ui/controls';
 import { ExerciseView } from './ui/exercise-view';
 
-const store = new Store(loadSettings());
+// --- Determine the initial mode: URL wins, then localStorage, then default ---
+const savedSettings = loadSettings();
+const urlMode = modeFromUrl();
+if (urlMode != null) {
+  // The URL explicitly requests a mode — override whatever localStorage had.
+  savedSettings.mode = urlMode;
+  savedSettings.exercise = { ...savedSettings.exercise, enabled: urlMode === 'exercises' };
+}
+
+const store = new Store(savedSettings);
 const engine = new MetronomeEngine(() => store.get());
+
+// Make sure the address bar reflects the active mode from the very start.
+// `replaceMode` does *not* create a new back-stack entry.
+replaceMode(store.get().mode);
 
 function toggleBeatState(beatIndex: number): void {
   const states = [...store.get().beatStates];
@@ -163,17 +177,26 @@ function syncMode(): void {
   else circle.render(store.get());
 }
 
-function setMode(mode: AppMode): void {
+/**
+ * Switch the app to a new mode. When `fromPopState` is true we are reacting to
+ * browser back/forward — the URL is already correct, so we must NOT push a new
+ * history entry (that would break the back button).
+ */
+function setMode(mode: AppMode, fromPopState = false): void {
   if (store.get().mode !== mode) {
     // Keep the legacy exercise.enabled flag in sync for backward compatibility.
     store.update({ mode, exercise: { ...store.get().exercise, enabled: mode === 'exercises' } });
   }
+  if (!fromPopState) pushMode(mode);
   syncMode();
 }
 
 modeMetronome.addEventListener('click', () => setMode('metronome'));
 modeExercises.addEventListener('click', () => setMode('exercises'));
 modePolyrhythm.addEventListener('click', () => setMode('polyrhythm'));
+
+// --- Browser back / forward: sync the mode from the URL ---
+onPopState((mode) => setMode(mode, true));
 
 // --- Polyrhythm a/b steppers ---
 const polyANum = document.getElementById('poly-a-num')!;
