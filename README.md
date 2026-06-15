@@ -8,6 +8,19 @@ Live: https://mackushev.github.io/metronome/ (moving to https://beat.js.org)
 
 ## Features
 
+### Three modes
+
+The app has three top-level modes, switchable via pills at the top of the
+page. Each mode has its own URL for analytics and deep-linking:
+
+| Mode | URL | Description |
+|------|-----|-------------|
+| **Metronome** | `/` (default) | Classic metronome with beats, subdivisions, accents, and a beat bar |
+| **Exercises** | `/exercises` | Sheet-music practice view with auto-advance and filtering by page/topic |
+| **Polyrhythm** | `/polyrhythm` | Two independent pulse streams (A : B) sharing one cycle on the circle |
+
+### Core
+
 - **Tempo** 20–300 BPM: a rotary ring around the play button (one turn =
   60 BPM), ±1 arrows on the ring, a slider, ±1/±5 buttons, and vertical
   drag on the circle center.
@@ -23,7 +36,13 @@ Live: https://mackushev.github.io/metronome/ (moving to https://beat.js.org)
   clicks are relative to beats.
 - **Speed trainer**: every N seconds the tempo rises by M BPM (applied
   from the nearest beat), optionally up to a ceiling; progress is shown
-  as a green ring around the circle.
+  as a green ring around the circle. Supports two-stage ramps.
+- **Polyrhythm mode**: two concentric dot rings (master A and slave B,
+  1–9 pulses each) with independent mute toggles and per-rhythm sound
+  selection.
+- **Exercises mode**: displays sheet-music images from `public/content/`,
+  with page/topic filters, prev/next navigation, auto-advance timer,
+  and random order.
 - **Volume slider**, Space for start/stop, settings persisted in
   localStorage, responsive layout for phone, tablet, and desktop.
 - **Works offline**: a PWA service worker precaches the app after the
@@ -45,19 +64,39 @@ Pushes to `main` are deployed to GitHub Pages automatically
 
 ```
 src/
-├── main.ts          — wires the UI, the engine, and the trainer together
-├── state.ts         — settings, subscriptions, localStorage
-├── trainer.ts       — pure speed-trainer logic
+├── main.ts              — wires the UI, the engine, the router, and the trainer together
+├── state.ts             — Settings type, Store (subscriptions + localStorage persistence)
+├── router.ts            — client-side routing: URL ↔ AppMode via History API + GoatCounter
+├── trainer.ts           — pure speed-trainer logic (multi-stage tempo ramp)
 ├── audio/
-│   ├── engine.ts    — lookahead tick scheduler (precise AudioContext clock)
-│   └── sounds.ts    — click synthesis with oscillators
+│   ├── engine.ts        — lookahead tick scheduler (precise AudioContext clock)
+│   └── sounds.ts        — click/beep/cowbell synthesis with oscillators
+├── content/
+│   ├── manifest.ts      — loads exercise descriptors from public/content/
+│   ├── navigation.ts    — prev/next/random exercise navigation
+│   └── types.ts         — exercise content types
 └── ui/
-    ├── circle.ts    — SVG circle: dots, needle, dial, selectors, trainer ring
-    ├── beatbar.ts   — beat rectangles below the circle
-    └── controls.ts  — settings panel
+    ├── circle.ts        — SVG circle: dots, needle, dial, selectors, polyrhythm rings, trainer arc
+    ├── beatbar.ts       — beat rectangles below the circle
+    ├── controls.ts      — settings panel (sound, balance, volume, speed trainer stages)
+    └── exercise-view.ts — exercise sheet display, filters, auto-advance
 ```
 
-Key decision: the sound is driven by a lookahead scheduler ("A Tale of Two
-Clocks") — a cheap `setInterval` schedules clicks ~120 ms ahead against the
-precise `AudioContext.currentTime` clock, so the tempo never drifts with
-browser timer jitter.
+### Key decisions
+
+- **Sound scheduling** is driven by a lookahead scheduler ("A Tale of Two
+  Clocks") — a cheap `setInterval` schedules clicks ~120 ms ahead against the
+  precise `AudioContext.currentTime` clock, so the tempo never drifts with
+  browser timer jitter.
+
+- **Client-side routing** uses `history.pushState` / `replaceState` so mode
+  switches change the URL without a page reload. On GitHub Pages a
+  `404.html` (auto-copied from `index.html` at build time) catches direct
+  navigation to sub-paths. The service worker's `navigateFallback` handles
+  the same for offline mode.
+
+- **State management** is a single `Store` class with immutable snapshots
+  and a subscribe/notify pattern. All settings (including the active mode)
+  are persisted to `localStorage` on every change. The URL takes precedence
+  over localStorage on page load — if you open `/exercises`, you get the
+  exercises view regardless of what was saved.
