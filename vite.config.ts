@@ -37,6 +37,10 @@ export default defineConfig(({ command }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       workbox: {
+        // Ensure the new service worker takes over immediately after install,
+        // so users never run stale JS/CSS from a previous deployment.
+        skipWaiting: true,
+        clientsClaim: true,
         // Exercise content is opt-in and can be large — keep it out of the
         // precache (which would force a full download on first load) and serve
         // it from a runtime cache instead, so pages stay available offline once

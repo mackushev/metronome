@@ -331,3 +331,16 @@ function frame(): void {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// --- Service worker: reload the page when a new version takes control ---
+// With skipWaiting + clientsClaim the new SW activates immediately after
+// install; the `controllerchange` event fires on the *old* page that is
+// still running stale JS/CSS.  A reload picks up the fresh precache.
+if ('serviceWorker' in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+}
