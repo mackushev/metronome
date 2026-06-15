@@ -989,6 +989,54 @@ body {
   font-weight: 600;
 }
 
+/* --- Next exercise preview (shown before auto-advance) --- */
+
+.ex-preview[hidden] {
+  display: none;
+}
+
+.ex-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  animation: ex-preview-fade-in 0.5s ease forwards;
+}
+
+@keyframes ex-preview-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ex-preview-label {
+  text-align: center;
+  color: var(--dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+.ex-preview-viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  opacity: 0.45;
+  filter: grayscale(0.15);
+  transition: opacity 0.3s;
+}
+
+.ex-preview-viewport img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  max-width: none;
+}
+
 .exercise-controls {
   display: flex;
   flex-wrap: wrap;

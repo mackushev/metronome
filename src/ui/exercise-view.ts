@@ -22,8 +22,6 @@ export class ExerciseView {
 
   private loading: Promise<void> | null = null;
 
-  private autoTimer: number | undefined;
-
   /** Timestamp (ms) when the current auto-advance interval started. */
   private autoStartedAt = 0;
 
@@ -35,6 +33,24 @@ export class ExerciseView {
 
   /** Pending deferred render (requestAnimationFrame id). */
   private deferredRenderRaf: number | undefined;
+
+  /** The id of the next item currently shown in the preview (to avoid re-rendering). */
+  private previewItemId: string | null = null;
+
+  /** Cached next item so that advanceOnce uses the same item shown in preview (matters for random). */
+  private cachedNextItem: Item | null = null;
+
+  /**
+   * True when the auto-advance countdown has expired but we are waiting for
+   * the next measure start (beat 0) before actually switching the exercise.
+   */
+  private pendingAdvance = false;
+
+  /** Whether auto-advance animation is active (replaces the old setInterval). */
+  private autoActive = false;
+
+  /** Seconds before auto-advance at which the next exercise preview appears. */
+  private static readonly PREVIEW_LEAD_SEC = 20;
 
   private readonly root = byId<HTMLElement>('exercise-view');
   private readonly viewport = byId<HTMLDivElement>('ex-viewport');
@@ -49,6 +65,10 @@ export class ExerciseView {
   private readonly autoPanel = byId<HTMLDivElement>('ex-auto-panel');
   private readonly progressBar = byId<HTMLDivElement>('ex-progress-bar');
   private readonly progressFill = byId<HTMLDivElement>('ex-progress-fill');
+  private readonly preview = byId<HTMLDivElement>('ex-preview');
+  private readonly previewViewport = byId<HTMLDivElement>('ex-preview-viewport');
+  private readonly previewImg = byId<HTMLImageElement>('ex-preview-img');
+  private readonly previewLabel = byId<HTMLDivElement>('ex-preview-label');
 
   /** Last known autoSec before the user turned auto off (so we can restore it). */
   private lastAutoSec = 20;
@@ -183,10 +203,26 @@ export class ExerciseView {
 
   /** One auto-advance step within the current filter. */
   private advanceOnce(): void {
-    const target = pickNext(this.filtered(), this.s().currentId, this.s().random);
+    // Use the cached preview item when available so the user sees exactly
+    // the exercise that was previewed (important for random mode).
+    const target = this.cachedNextItem ?? pickNext(this.filtered(), this.s().currentId, this.s().random);
     if (target) this.patch({ currentId: target.id });
     // Reset the progress timer for the next interval.
     this.autoStartedAt = performance.now();
+    this.pendingAdvance = false;
+    // Hide the preview so it can reappear for the next cycle.
+    this.hidePreview();
+  }
+
+  /**
+   * Called from main.ts on every beat-0 (start of a new measure).
+   * If the auto-advance countdown has already elapsed, the exercise
+   * switches now — keeping the change aligned with the musical phrase.
+   */
+  onMeasureStart(): void {
+    if (this.pendingAdvance) {
+      this.advanceOnce();
+    }
   }
 
   /** Toggle auto-advance on/off via the header click. */
@@ -211,8 +247,8 @@ export class ExerciseView {
   }
 
   private stopAuto(): void {
-    window.clearInterval(this.autoTimer);
-    this.autoTimer = undefined;
+    this.autoActive = false;
+    this.pendingAdvance = false;
     this.stopProgressAnimation();
   }
 
@@ -221,7 +257,7 @@ export class ExerciseView {
     const sec = this.s().autoSec;
     if (sec > 0 && !this.root.hidden && this.playing) {
       this.autoStartedAt = performance.now();
-      this.autoTimer = window.setInterval(() => this.advanceOnce(), sec * 1000);
+      this.autoActive = true;
       this.showProgress();
       this.startProgressAnimation();
     } else {
@@ -239,6 +275,7 @@ export class ExerciseView {
     this.progressBar.hidden = true;
     this.progressFill.style.width = '0%';
     this.clearCountdownBadge();
+    this.hidePreview();
   }
 
   /** Remove the countdown <span> from the caption if present. */
@@ -262,16 +299,34 @@ export class ExerciseView {
     this.stopProgressAnimation();
     const tick = () => {
       const sec = this.s().autoSec;
-      if (sec <= 0) {
+      if (sec <= 0 || !this.autoActive) {
         this.hideProgress();
         return;
       }
       const elapsed = (performance.now() - this.autoStartedAt) / 1000;
-      const fraction = Math.min(elapsed / sec, 1);
       const remaining = Math.max(0, sec - elapsed);
 
-      this.progressFill.style.width = `${(fraction * 100).toFixed(1)}%`;
-      this.setCountdownBadge(`${Math.ceil(remaining)}s`);
+      if (remaining <= 0 && !this.pendingAdvance) {
+        // Countdown expired — mark as pending; the actual switch happens
+        // on the next measure start (beat 0) via onMeasureStart().
+        this.pendingAdvance = true;
+        this.ensurePreview();
+      }
+
+      // While pending, keep the bar full and show "waiting…" instead of 0s.
+      if (this.pendingAdvance) {
+        this.progressFill.style.width = '100%';
+        this.setCountdownBadge('⏎');
+      } else {
+        const fraction = Math.min(elapsed / sec, 1);
+        this.progressFill.style.width = `${(fraction * 100).toFixed(1)}%`;
+        this.setCountdownBadge(`${Math.ceil(remaining)}s`);
+      }
+
+      // Show the next exercise preview when within the lead window.
+      if (!this.pendingAdvance && remaining <= ExerciseView.PREVIEW_LEAD_SEC && remaining > 0) {
+        this.ensurePreview();
+      }
 
       this.rafId = requestAnimationFrame(tick);
     };
@@ -283,6 +338,58 @@ export class ExerciseView {
       cancelAnimationFrame(this.rafId);
       this.rafId = undefined;
     }
+  }
+
+  /* --- Next exercise preview --- */
+
+  /** Show the preview if not already visible; compute and render the next item. */
+  private ensurePreview(): void {
+    if (!this.model) return;
+    const list = this.filtered();
+    if (list.length < 2) return;
+    // Reuse the already-picked item so random mode stays consistent.
+    if (this.cachedNextItem && !this.preview.hidden) return;
+    const next = this.cachedNextItem ?? pickNext(list, this.s().currentId, this.s().random);
+    if (!next) return;
+    this.cachedNextItem = next;
+    this.renderPreview(next);
+  }
+
+  /** Render a specific item into the preview panel. */
+  private renderPreview(item: Item): void {
+    if (!this.model) return;
+    const image = this.model.imagesById.get(item.image);
+    if (!image) return;
+
+    this.previewItemId = item.id;
+    this.preview.hidden = false;
+
+    const width = this.previewViewport.clientWidth || this.viewport.clientWidth || 360;
+    if (width <= 0) return;
+
+    const t = crop(item.bbox, image, width);
+    this.previewViewport.style.height = `${t.viewportHeight}px`;
+    this.previewImg.style.width = `${t.imgWidth}px`;
+    this.previewImg.style.height = `${t.imgHeight}px`;
+    this.previewImg.style.transform = `translate(${t.offsetX}px, ${t.offsetY}px)`;
+
+    const newSrc = resolveSrc(image.src);
+    if (this.previewImg.getAttribute('src') !== newSrc) {
+      this.previewImg.src = newSrc;
+    }
+
+    // Caption: show the next item's position in the list.
+    const list = this.filtered();
+    const pos = list.findIndex((it) => it.id === item.id) + 1;
+    this.previewLabel.textContent = `Next: ${item.title ? `${item.title} · ` : ''}${pos}/${list.length}`;
+  }
+
+  /** Hide and reset the preview panel. */
+  private hidePreview(): void {
+    if (this.preview.hidden && this.previewItemId === null) return;
+    this.preview.hidden = true;
+    this.previewItemId = null;
+    this.cachedNextItem = null;
   }
 
   private populatePickers(): void {

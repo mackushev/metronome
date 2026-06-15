@@ -99,7 +99,7 @@ export class MetronomeEngine {
   private polyKey = '';
 
   /** Called when each beat is scheduled (used by the speed trainer) */
-  onBeatScheduled: ((audioTime: number) => void) | null = null;
+  onBeatScheduled: ((audioTime: number, beatIndex: number) => void) | null = null;
 
   /** Called when audio cannot work: no Web Audio support or playback blocked */
   onAudioIssue: ((issue: 'unsupported' | 'blocked') => void) | null = null;
@@ -251,7 +251,7 @@ export class MetronomeEngine {
       if (this.pos.subIndex >= s.subdivision) this.pos = { ...this.pos, subIndex: 0 };
 
       if (this.pos.subIndex === 0) {
-        this.onBeatScheduled?.(this.nextTime);
+        this.onBeatScheduled?.(this.nextTime, this.pos.beatIndex);
       }
       // The trainer may have just changed the BPM — read the interval after the callback
       const interval = 60 / this.getSettings().bpm / s.subdivision;

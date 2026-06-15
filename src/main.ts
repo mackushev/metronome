@@ -98,11 +98,16 @@ function resetTrainerBase(): void {
 }
 
 // The trainer tempo is applied from the nearest beat — no waiting for the measure end
-engine.onBeatScheduled = (audioTime) => {
+engine.onBeatScheduled = (audioTime, beatIndex) => {
   const s = store.get();
-  if (!s.trainer.enabled || !trainerBase) return;
-  const target = trainerTargetBpm(trainerBase.startBpm, audioTime - trainerBase.startTime, s.trainer);
-  if (target !== s.bpm) store.update({ bpm: target });
+  if (s.trainer.enabled && trainerBase) {
+    const target = trainerTargetBpm(trainerBase.startBpm, audioTime - trainerBase.startTime, s.trainer);
+    if (target !== s.bpm) store.update({ bpm: target });
+  }
+  // Exercise auto-advance switches only at the start of a new measure.
+  if (beatIndex === 0 && s.mode === 'exercises') {
+    exerciseView.onMeasureStart();
+  }
 };
 
 // --- Audio problem notices (mobile browsers, autoplay policies, iOS mute switch) ---
