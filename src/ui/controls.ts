@@ -247,24 +247,53 @@ function bindTrainer(store: Store): void {
   syncTrainer(store.get());
 }
 
-/** Binds the static settings panel markup to the store */
-export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
-  const soundSeg = byId<HTMLDivElement>('sound-seg');
-  const balanceSeg = byId<HTMLDivElement>('balance-seg');
-  const volumeSlider = byId<HTMLInputElement>('volume-slider');
-
-  // --- Sound ---
+/** Build a row of sound buttons that update a specific field via onSelect */
+function buildSoundButtons(
+  container: HTMLElement,
+  onSelect: (name: SoundName) => void,
+): void {
   for (const { name, label } of SOUNDS) {
     const btn = document.createElement('button');
     btn.className = 'btn seg-btn';
     btn.textContent = label;
     btn.dataset.value = name;
-    btn.addEventListener('click', () => {
-      store.update({ sound: name });
-      callbacks.onSoundPreview();
-    });
-    soundSeg.append(btn);
+    btn.addEventListener('click', () => onSelect(name));
+    container.append(btn);
   }
+}
+
+/** Highlight the selected sound button within a container */
+function syncSoundButtons(container: HTMLElement, selected: SoundName): void {
+  for (const btn of container.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
+    btn.classList.toggle('selected', (btn.dataset.value as SoundName) === selected);
+  }
+}
+
+/** Binds the static settings panel markup to the store */
+export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
+  const soundSeg = byId<HTMLDivElement>('sound-seg');
+  const polySoundASeg = byId<HTMLDivElement>('poly-sound-a-seg');
+  const polySoundBSeg = byId<HTMLDivElement>('poly-sound-b-seg');
+  const balanceSeg = byId<HTMLDivElement>('balance-seg');
+  const volumeSlider = byId<HTMLInputElement>('volume-slider');
+
+  // --- Sound (single, metronome/exercises mode) ---
+  buildSoundButtons(soundSeg, (name) => {
+    store.update({ sound: name });
+    callbacks.onSoundPreview();
+  });
+
+  // --- Sound per rhythm (polyrhythm mode) ---
+  buildSoundButtons(polySoundASeg, (name) => {
+    const p = store.get().polyrhythm;
+    store.update({ polyrhythm: { ...p, soundA: name } });
+    callbacks.onSoundPreview();
+  });
+  buildSoundButtons(polySoundBSeg, (name) => {
+    const p = store.get().polyrhythm;
+    store.update({ polyrhythm: { ...p, soundB: name } });
+    callbacks.onSoundPreview('sub');
+  });
 
   // --- Clicks vs beats balance ---
   for (const { value, title } of CLICK_VOLUMES) {
@@ -292,9 +321,9 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // --- Reflect state back into static controls ---
   store.subscribe((s) => {
-    for (const btn of soundSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
-      btn.classList.toggle('selected', (btn.dataset.value as SoundName) === s.sound);
-    }
+    syncSoundButtons(soundSeg, s.sound);
+    syncSoundButtons(polySoundASeg, s.polyrhythm.soundA);
+    syncSoundButtons(polySoundBSeg, s.polyrhythm.soundB);
     for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
       btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
     }
@@ -303,9 +332,9 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // Initial render
   const s = store.get();
-  for (const btn of soundSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
-    btn.classList.toggle('selected', (btn.dataset.value as SoundName) === s.sound);
-  }
+  syncSoundButtons(soundSeg, s.sound);
+  syncSoundButtons(polySoundASeg, s.polyrhythm.soundA);
+  syncSoundButtons(polySoundBSeg, s.polyrhythm.soundB);
   for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
     btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
   }

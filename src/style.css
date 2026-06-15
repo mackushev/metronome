@@ -774,6 +774,27 @@ body {
   display: none;
 }
 
+/* In polyrhythm mode: hide the single sound selector, show per-rhythm selectors */
+#poly-sound-panel {
+  display: none;
+}
+.mode-polyrhythm #sound-seg {
+  display: none;
+}
+.mode-polyrhythm #poly-sound-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.poly-sound-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.poly-sound-row .seg {
+  flex: 1;
+}
+
 .group-poly .group-label {
   margin-bottom: 6px;
 }

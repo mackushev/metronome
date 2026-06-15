@@ -147,13 +147,13 @@
           <div class="control-group group-poly" id="poly-panel">
             <div class="group-label">Polyrhythm</div>
             <div class="poly-row">
-              <span class="poly-lbl poly-lbl-a">beats</span>
+              <span class="poly-lbl poly-lbl-a">master</span>
               <button class="btn trainer-btn" id="poly-a-dec">−</button>
               <span class="trainer-num" id="poly-a-num">3</span>
               <button class="btn trainer-btn" id="poly-a-inc">+</button>
             </div>
             <div class="poly-row">
-              <span class="poly-lbl poly-lbl-b">ticks</span>
+              <span class="poly-lbl poly-lbl-b">slave</span>
               <button class="btn trainer-btn" id="poly-b-dec">−</button>
               <span class="trainer-num" id="poly-b-num">2</span>
               <button class="btn trainer-btn" id="poly-b-inc">+</button>
@@ -163,7 +163,19 @@
 
           <div class="control-group group-sound">
             <div class="group-label">Sound</div>
+            <!-- Single sound selector (metronome / exercises mode) -->
             <div class="row seg" id="sound-seg"></div>
+            <!-- Per-rhythm sound selectors (polyrhythm mode) -->
+            <div class="poly-sound-panel" id="poly-sound-panel">
+              <div class="poly-sound-row">
+                <span class="poly-lbl poly-lbl-a">master</span>
+                <div class="row seg" id="poly-sound-a-seg"></div>
+              </div>
+              <div class="poly-sound-row">
+                <span class="poly-lbl poly-lbl-b">slave</span>
+                <div class="row seg" id="poly-sound-b-seg"></div>
+              </div>
+            </div>
             <div class="balance-label">Clicks vs beats</div>
             <div class="row seg" id="balance-seg"></div>
           </div>

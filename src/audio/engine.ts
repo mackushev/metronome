@@ -319,8 +319,9 @@ export class MetronomeEngine {
           ev.rhythm === 'a' ? (ev.index === 0 ? 'accent' : 'normal') : 'sub';
         const level =
           ev.rhythm === 'a' ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
+        const sound = ev.rhythm === 'a' ? s.polyrhythm.soundA : s.polyrhythm.soundB;
         this.master!.gain.value = s.volume;
-        scheduleSound(ctx, this.master!, s.sound, kind, time, level);
+        scheduleSound(ctx, this.master!, sound, kind, time, level);
       }
 
       this.polyScheduled.push({

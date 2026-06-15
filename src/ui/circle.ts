@@ -131,13 +131,19 @@ export class CircleView {
   private polyDotsA: SVGCircleElement[] = [];
   private polyDotsB: SVGCircleElement[] = [];
   private polyKey = '';
+  /** Last pulse index reported by the engine for each rhythm */
   private polyActiveA = -1;
   private polyActiveB = -1;
+  /** Whether the highlight for the current pulse has already been faded out by the timer */
+  private polyFadedA = false;
+  private polyFadedB = false;
   /** Per-dot fade timers so each highlight turns off independently */
   private polyTimerA: ReturnType<typeof setTimeout> | null = null;
   private polyTimerB: ReturnType<typeof setTimeout> | null = null;
-  /** How long (ms) a polyrhythm dot stays lit after it fires */
-  private static readonly POLY_HIGHLIGHT_MS = 80;
+  /** How long (ms) a polyrhythm dot stays lit after it fires.
+   *  150 ms works well: at 120 BPM in 3:2 the shortest gap is ~167 ms,
+   *  so the flash ends just before the next pulse arrives. */
+  private static readonly POLY_HIGHLIGHT_MS = 150;
   private selPolyA: SelectorDot[] = [];
   private selPolyB: SelectorDot[] = [];
   private selPolyDecor: SVGElement[] = [];
@@ -415,6 +421,8 @@ export class CircleView {
     this.activeIndex = -1;
     this.polyActiveA = -1;
     this.polyActiveB = -1;
+    this.polyFadedA = false;
+    this.polyFadedB = false;
     if (this.polyTimerA !== null) { clearTimeout(this.polyTimerA); this.polyTimerA = null; }
     if (this.polyTimerB !== null) { clearTimeout(this.polyTimerB); this.polyTimerB = null; }
     this.svg.replaceChildren();
@@ -471,15 +479,18 @@ export class CircleView {
   }
 
   private setPolyActive(aIndex: number, bIndex: number): void {
-    // Rhythm A: light up on new pulse, schedule independent fade-out
+    // Rhythm A: light up on a *new* pulse, schedule independent fade-out.
+    // polyPosition() keeps returning the same aIndex until the next pulse,
+    // so we use polyFadedA to avoid re-lighting after the timer fires.
     if (aIndex !== this.polyActiveA) {
-      if (this.polyTimerA !== null) clearTimeout(this.polyTimerA);
+      if (this.polyTimerA !== null) { clearTimeout(this.polyTimerA); this.polyTimerA = null; }
       if (this.polyActiveA >= 0) this.polyDotsA[this.polyActiveA]?.classList.remove('active');
+      this.polyFadedA = false;
       if (aIndex >= 0) {
         this.polyDotsA[aIndex]?.classList.add('active');
         this.polyTimerA = setTimeout(() => {
           this.polyDotsA[aIndex]?.classList.remove('active');
-          if (this.polyActiveA === aIndex) this.polyActiveA = -1;
+          this.polyFadedA = true;
           this.polyTimerA = null;
         }, CircleView.POLY_HIGHLIGHT_MS);
       }
@@ -487,13 +498,14 @@ export class CircleView {
     }
     // Rhythm B: same independent fade-out
     if (bIndex !== this.polyActiveB) {
-      if (this.polyTimerB !== null) clearTimeout(this.polyTimerB);
+      if (this.polyTimerB !== null) { clearTimeout(this.polyTimerB); this.polyTimerB = null; }
       if (this.polyActiveB >= 0) this.polyDotsB[this.polyActiveB]?.classList.remove('active');
+      this.polyFadedB = false;
       if (bIndex >= 0) {
         this.polyDotsB[bIndex]?.classList.add('active');
         this.polyTimerB = setTimeout(() => {
           this.polyDotsB[bIndex]?.classList.remove('active');
-          if (this.polyActiveB === bIndex) this.polyActiveB = -1;
+          this.polyFadedB = true;
           this.polyTimerB = null;
         }, CircleView.POLY_HIGHLIGHT_MS);
       }

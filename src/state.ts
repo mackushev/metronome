@@ -14,14 +14,18 @@ export type AppMode = 'metronome' | 'exercises' | 'polyrhythm';
  * be individually muted.
  */
 export interface PolyrhythmSettings {
-  /** Number of pulses in rhythm A ("beats") per cycle */
+  /** Number of pulses in rhythm A (master) per cycle */
   a: number;
-  /** Number of pulses in rhythm B ("ticks") per cycle */
+  /** Number of pulses in rhythm B (slave) per cycle */
   b: number;
   /** Indices of muted pulses in rhythm A */
   mutedA: number[];
   /** Indices of muted pulses in rhythm B */
   mutedB: number[];
+  /** Sound for rhythm A (master); defaults to the global sound */
+  soundA: SoundName;
+  /** Sound for rhythm B (slave); defaults to the global sound */
+  soundB: SoundName;
 }
 
 export interface TrainerStage {
@@ -155,7 +159,7 @@ export function defaultSettings(): Settings {
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
     exercise: { enabled: false, currentId: null, page: '', topic: '', random: false, autoSec: 0 },
-    polyrhythm: { a: 3, b: 2, mutedA: [], mutedB: [] },
+    polyrhythm: { a: 3, b: 2, mutedA: [], mutedB: [], soundA: 'click', soundB: 'click' },
   };
 }
 
@@ -174,7 +178,15 @@ function parsePolyrhythm(raw: unknown, fallback: PolyrhythmSettings): Polyrhythm
           .map((x) => Number(x))
           .filter((x) => Number.isInteger(x) && x >= 0 && x < count)
       : [];
-  return { a, b, mutedA: cleanMuted(p.mutedA, a), mutedB: cleanMuted(p.mutedB, b) };
+  const validSound = (v: unknown, def: SoundName): SoundName =>
+    SOUNDS.some((s) => s.name === v) ? (v as SoundName) : def;
+  return {
+    a, b,
+    mutedA: cleanMuted(p.mutedA, a),
+    mutedB: cleanMuted(p.mutedB, b),
+    soundA: validSound(p.soundA, fallback.soundA),
+    soundB: validSound(p.soundB, fallback.soundB),
+  };
 }
 
 function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
