@@ -238,6 +238,11 @@ function syncPolyControls(): void {
 syncMode();
 syncPolyControls();
 
+// The collapsible panels are collapsed by the syncs above; re-enable transitions
+// only after the browser has painted that initial (collapsed) state, so the
+// expanded→collapsed border/padding animation does not flash on load.
+requestAnimationFrame(() => requestAnimationFrame(() => appEl.classList.remove('preload')));
+
 // --- Start/stop ---
 function togglePlay(): void {
   engine.toggle();

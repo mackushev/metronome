@@ -15,6 +15,18 @@
   box-sizing: border-box;
 }
 
+/*
+ * Suppress all transitions until the first paint.  The collapsible panels start
+ * un-collapsed in the markup and are collapsed by the first sync(); without this
+ * the green "expanded" border would animate to gray on every load (a visible
+ * flicker, most noticeable on fast cached loads).  main.ts removes `.preload`
+ * after the first frame.
+ */
+.preload,
+.preload * {
+  transition: none !important;
+}
+
 html,
 body {
   margin: 0;

@@ -53,9 +53,16 @@ export default defineConfig(({ command }) => ({
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.includes('/content/'),
-            handler: 'CacheFirst',
+            // NetworkFirst (not CacheFirst): descriptors and sheet images share
+            // stable filenames, so a redeploy with updated bboxes/images would
+            // otherwise be masked forever by the runtime cache — the viewer kept
+            // showing a stale crop (misaligned exercise) until a hard reload.
+            // NetworkFirst fetches the fresh content when online and falls back
+            // to the cache when offline, so pages stay available offline once viewed.
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'exercise-content',
+              networkTimeoutSeconds: 4,
               expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 90 },
               cacheableResponse: { statuses: [0, 200] },
             },
