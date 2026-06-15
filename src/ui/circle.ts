@@ -133,6 +133,11 @@ export class CircleView {
   private polyKey = '';
   private polyActiveA = -1;
   private polyActiveB = -1;
+  /** Per-dot fade timers so each highlight turns off independently */
+  private polyTimerA: ReturnType<typeof setTimeout> | null = null;
+  private polyTimerB: ReturnType<typeof setTimeout> | null = null;
+  /** How long (ms) a polyrhythm dot stays lit after it fires */
+  private static readonly POLY_HIGHLIGHT_MS = 80;
   private selPolyA: SelectorDot[] = [];
   private selPolyB: SelectorDot[] = [];
   private selPolyDecor: SVGElement[] = [];
@@ -177,18 +182,19 @@ export class CircleView {
 
     // Polyrhythm: the same outer arcs select the two pulse counts (a / b)
     this.selPolyDecor = this.buildSelectorBands([
-      ['band-poly-a', +1, 'beats'],
-      ['band-poly-b', -1, 'ticks'],
+      ['band-poly-a', +1, 'master'],
+      ['band-poly-b', -1, 'slave'],
     ]);
     this.selPolyA = this.buildSelector(POLY_A_MAX, 'sel-poly-a', +1, (value) =>
       this.callbacks.onPolySelectA(value),
+      14,
     );
     this.selPolyB = this.buildSelector(
       POLY_B_MAX,
       'sel-poly-b',
       -1,
       (value) => this.callbacks.onPolySelectB(value),
-      8,
+      14,
     );
   }
 
@@ -409,6 +415,8 @@ export class CircleView {
     this.activeIndex = -1;
     this.polyActiveA = -1;
     this.polyActiveB = -1;
+    if (this.polyTimerA !== null) { clearTimeout(this.polyTimerA); this.polyTimerA = null; }
+    if (this.polyTimerB !== null) { clearTimeout(this.polyTimerB); this.polyTimerB = null; }
     this.svg.replaceChildren();
     this.dots = [];
     this.polyDotsA = [];
@@ -419,13 +427,13 @@ export class CircleView {
       el('circle', { class: 'base-ring poly-inner-ring', cx: CX, cy: CY, r: POLY_B_RING_R }),
       this.needle,
     );
-    // Outer arc selectors for the two pulse counts (right = a/beats, left = b/ticks)
+    // Outer arc selectors for the two pulse counts (right = a/master, left = b/slave)
     this.svg.append(...this.selPolyDecor);
     for (const { dot, num, hit } of [...this.selPolyA, ...this.selPolyB]) {
       this.svg.append(dot, num, hit);
     }
 
-    // Rhythm A on the outer ring (the "beats")
+    // Rhythm A on the outer ring (master)
     for (let i = 0; i < a; i++) {
       const { x, y } = polar(DOT_RING_R, tickAngle(i, a));
       const dot = el('circle', { class: 'dot dot-beat dot-poly-a', cx: x, cy: y, r: 11 });
@@ -436,7 +444,7 @@ export class CircleView {
       this.svg.append(dot);
       this.polyDotsA.push(dot);
     }
-    // Rhythm B on the inner ring (the "ticks")
+    // Rhythm B on the inner ring (slave)
     for (let j = 0; j < b; j++) {
       const { x, y } = polar(POLY_B_RING_R, tickAngle(j, b));
       const dot = el('circle', { class: 'dot dot-poly-b', cx: x, cy: y, r: 8 });
@@ -463,14 +471,32 @@ export class CircleView {
   }
 
   private setPolyActive(aIndex: number, bIndex: number): void {
+    // Rhythm A: light up on new pulse, schedule independent fade-out
     if (aIndex !== this.polyActiveA) {
+      if (this.polyTimerA !== null) clearTimeout(this.polyTimerA);
       if (this.polyActiveA >= 0) this.polyDotsA[this.polyActiveA]?.classList.remove('active');
-      if (aIndex >= 0) this.polyDotsA[aIndex]?.classList.add('active');
+      if (aIndex >= 0) {
+        this.polyDotsA[aIndex]?.classList.add('active');
+        this.polyTimerA = setTimeout(() => {
+          this.polyDotsA[aIndex]?.classList.remove('active');
+          if (this.polyActiveA === aIndex) this.polyActiveA = -1;
+          this.polyTimerA = null;
+        }, CircleView.POLY_HIGHLIGHT_MS);
+      }
       this.polyActiveA = aIndex;
     }
+    // Rhythm B: same independent fade-out
     if (bIndex !== this.polyActiveB) {
+      if (this.polyTimerB !== null) clearTimeout(this.polyTimerB);
       if (this.polyActiveB >= 0) this.polyDotsB[this.polyActiveB]?.classList.remove('active');
-      if (bIndex >= 0) this.polyDotsB[bIndex]?.classList.add('active');
+      if (bIndex >= 0) {
+        this.polyDotsB[bIndex]?.classList.add('active');
+        this.polyTimerB = setTimeout(() => {
+          this.polyDotsB[bIndex]?.classList.remove('active');
+          if (this.polyActiveB === bIndex) this.polyActiveB = -1;
+          this.polyTimerB = null;
+        }, CircleView.POLY_HIGHLIGHT_MS);
+      }
       this.polyActiveB = bIndex;
     }
   }

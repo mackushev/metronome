@@ -331,7 +331,13 @@ export class MetronomeEngine {
         cycleDur,
       });
       this.polyCursor += 1;
-      this.nextTime = time + 1e-4;
+      // Peek at the next event: if it fires at the same instant (coincident
+      // pulse, e.g. both rhythms sharing the downbeat), keep nextTime unchanged
+      // so the while-loop processes it without skipping.
+      const peek = this.polyCursor < this.polyEvents.length ? this.polyEvents[this.polyCursor] : null;
+      if (!peek || peek.offset !== ev.offset) {
+        this.nextTime = time + 1e-4;
+      }
     }
     // Trim pulses that already sounded so the queue does not grow
     const cutoff = ctx.currentTime - 1;

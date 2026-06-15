@@ -175,6 +175,17 @@ describe('polyrhythm: cycle events', () => {
     // Pulses are evenly spaced within each rhythm
     expect(events.filter((e) => e.rhythm === 'a').map((e) => e.offset)).toEqual([0, 0.25, 0.5, 0.75]);
   });
+
+  it('coincident offsets appear as consecutive events so both are scheduled', () => {
+    // 4:2 — rhythm B pulses at 0 and 0.5 coincide with rhythm A pulses
+    const events = polyEventsForCycle(4, 2);
+    const atZero = events.filter((e) => e.offset === 0);
+    expect(atZero).toHaveLength(2);
+    expect(atZero.map((e) => e.rhythm)).toEqual(['a', 'b']);
+    const atHalf = events.filter((e) => e.offset === 0.5);
+    expect(atHalf).toHaveLength(2);
+    expect(atHalf.map((e) => e.rhythm)).toEqual(['a', 'b']);
+  });
 });
 
 describe('togglePolyMute', () => {

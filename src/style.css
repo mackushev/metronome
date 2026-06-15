@@ -808,7 +808,7 @@ body {
 
 /* --- Polyrhythm circle dots --- */
 
-/* Rhythm A pulses (outer ring): the "beats" */
+/* Rhythm A pulses (outer ring): master */
 .dot-poly-a {
   fill: var(--accent);
   stroke: transparent;
@@ -818,11 +818,11 @@ body {
   r: 14;
   stroke: var(--accent);
 }
-/* Rhythm B pulses (inner ring): the "ticks" */
+/* Rhythm B pulses (inner ring): slave */
 .dot-poly-b {
   fill: var(--beat);
-  stroke: transparent;
-  stroke-width: 14;
+  stroke: var(--beat);
+  stroke-width: 2.5;
   cursor: pointer;
 }
 .dot-poly-a.muted,
@@ -832,10 +832,14 @@ body {
   stroke-width: 2;
   opacity: 0.6;
 }
-.dot-poly-a.active,
+/* Active highlight: keep the ring border in its own color, brighten only the fill */
+.dot-poly-a.active {
+  fill: var(--active);
+  stroke: var(--accent);
+}
 .dot-poly-b.active {
   fill: var(--active);
-  stroke: var(--active);
+  stroke: var(--beat);
 }
 .poly-inner-ring {
   opacity: 0.4;

@@ -148,9 +148,9 @@ describe('smoke: the app mounts', () => {
 
   it('polyrhythm outer arcs set the two pulse counts and fill up to the value', () => {
     (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
-    // Rhythm A arc (right): 4 dots (beats max), rhythm B arc (left): 15 dots (ticks max)
-    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a').length).toBe(4);
-    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-b').length).toBe(15);
+    // Rhythm A arc (right): 9 dots (master max), rhythm B arc (left): 9 dots (slave max)
+    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a').length).toBe(9);
+    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-b').length).toBe(9);
     // Each selector renders as dot, num, hit — tap the hit whose dot is poly-a, value 4
     const polyAHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
       h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-a'),
@@ -159,13 +159,13 @@ describe('smoke: the app mounts', () => {
     expect(document.getElementById('poly-a-num')!.textContent).toBe('4');
     expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(4);
     expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a.filled').length).toBe(4);
-    // Rhythm B can climb high — tap value 12 on the left arc
+    // Rhythm B — tap value 7 on the left arc
     const polyBHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
       h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-b'),
     );
-    polyBHits[11].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    expect(document.getElementById('poly-b-num')!.textContent).toBe('12');
-    expect(document.querySelectorAll('#circle .dot-poly-b').length).toBe(12);
+    polyBHits[6].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(document.getElementById('poly-b-num')!.textContent).toBe('7');
+    expect(document.querySelectorAll('#circle .dot-poly-b').length).toBe(7);
     (document.getElementById('mode-metronome') as HTMLButtonElement).click();
   });
 

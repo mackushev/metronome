@@ -77,13 +77,12 @@ export const BPM_MAX = 300;
 export const BEATS_MIN = 1;
 export const BEATS_MAX = 8;
 export const SUBDIVISIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-/** Polyrhythm pulse counts. Rhythm A ("beats") stays small and readable; rhythm
-    B ("ticks") may pack many more pulses into the same cycle. */
+/** Polyrhythm pulse counts. Both rhythms go up to 9 pulses per cycle. */
 export const POLY_MIN = 1;
-/** Max pulses in rhythm A ("beats") */
-export const POLY_A_MAX = 4;
-/** Max pulses in rhythm B ("ticks") */
-export const POLY_B_MAX = 15;
+/** Max pulses in rhythm A (master) */
+export const POLY_A_MAX = 9;
+/** Max pulses in rhythm B (slave) */
+export const POLY_B_MAX = 9;
 export const SOUNDS: { name: SoundName; label: string }[] = [
   { name: 'click', label: 'Click' },
   { name: 'beep', label: 'Beep' },
