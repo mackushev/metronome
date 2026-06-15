@@ -33,6 +33,9 @@ export class ExerciseView {
   /** Whether the metronome is currently playing. Auto-advance only runs while playing. */
   private playing = false;
 
+  /** Pending deferred render (requestAnimationFrame id). */
+  private deferredRenderRaf: number | undefined;
+
   private readonly root = byId<HTMLElement>('exercise-view');
   private readonly viewport = byId<HTMLDivElement>('ex-viewport');
   private readonly img = byId<HTMLImageElement>('ex-img');
@@ -71,6 +74,11 @@ export class ExerciseView {
       this.syncControls();
       this.render();
     });
+
+    // When a cached image loads instantly the browser may composite before
+    // the inline sizing styles are applied.  Re-render once the image is
+    // decoded to guarantee the crop transform matches the actual layout.
+    this.img.addEventListener('load', () => this.render());
   }
 
   private s(): ExerciseState {
@@ -101,6 +109,11 @@ export class ExerciseView {
     await this.loading;
     this.syncControls();
     this.render();
+    // Schedule a deferred re-render: after the element is unhidden the browser
+    // needs a layout pass to compute the real viewport width.  On fast cached
+    // loads the initial render() above may still see a zero or stale clientWidth;
+    // a rAF guarantees the DOM has been laid out before we measure again.
+    this.scheduleDeferredRender();
   }
 
   hide(): void {
@@ -310,6 +323,19 @@ export class ExerciseView {
     this.syncAuto();
   }
 
+  /**
+   * Schedule a single deferred render on the next animation frame.  This
+   * ensures the browser has completed layout after show/hide transitions so
+   * that clientWidth returns the real viewport width.
+   */
+  private scheduleDeferredRender(): void {
+    if (this.deferredRenderRaf !== undefined) return;
+    this.deferredRenderRaf = requestAnimationFrame(() => {
+      this.deferredRenderRaf = undefined;
+      this.render();
+    });
+  }
+
   private render(): void {
     const item = this.currentItem();
     if (!this.model || !item) {
@@ -323,12 +349,30 @@ export class ExerciseView {
     this.viewport.hidden = false;
 
     const width = this.viewport.clientWidth || this.root.clientWidth || 360;
+
+    // If the viewport has not been laid out yet (still hidden or zero-width),
+    // defer the render to after the browser completes layout.
+    if (width <= 0) {
+      this.scheduleDeferredRender();
+      return;
+    }
+
     const t = crop(item.bbox, image, width);
     this.viewport.style.height = `${t.viewportHeight}px`;
-    this.img.src = resolveSrc(image.src);
+
+    // Apply sizing and positioning styles *before* setting the src so that
+    // images served instantly from the service-worker / HTTP cache are
+    // composited at the correct size and offset from the very first frame.
     this.img.style.width = `${t.imgWidth}px`;
     this.img.style.height = `${t.imgHeight}px`;
     this.img.style.transform = `translate(${t.offsetX}px, ${t.offsetY}px)`;
+
+    const newSrc = resolveSrc(image.src);
+    // img.src returns the fully-resolved absolute URL, so compare against the
+    // attribute value to avoid always re-assigning (which resets decode state).
+    if (this.img.getAttribute('src') !== newSrc) {
+      this.img.src = newSrc;
+    }
 
     const list = this.filtered();
     const pos = list.findIndex((it) => it.id === item.id) + 1;
