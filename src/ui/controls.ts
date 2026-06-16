@@ -319,6 +319,12 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   // --- Speed trainer ---
   bindTrainer(store);
 
+  // --- Sound: plain collapse toggle (no enabled state, just show/hide) ---
+  const soundPanel = byId<HTMLDivElement>('sound-panel');
+  byId<HTMLDivElement>('sound-toggle').addEventListener('click', () =>
+    soundPanel.classList.toggle('collapsed'),
+  );
+
   // --- Reflect state back into static controls ---
   store.subscribe((s) => {
     syncSoundButtons(soundSeg, s.sound);

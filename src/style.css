@@ -279,10 +279,20 @@ body {
 
 /* --- Tempo dial --- */
 
+/* Tinted ring hinting that it spins to change tempo.
+   --dial-color is set from JS and shifts with the BPM (cool → warm). */
 .dial-track {
   fill: none;
-  stroke: var(--panel-border);
-  stroke-width: 3;
+  stroke: var(--dial-color, var(--beat));
+  stroke-width: 7;
+  opacity: 0.5;
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease;
+}
+
+/* Intensify while the user is spinning it */
+.dial-track.grabbing {
+  opacity: 1;
+  stroke-width: 9;
 }
 
 /* Invisible wide finger-sized grab zone */
@@ -525,22 +535,19 @@ body {
 }
 
 .collapsible-body {
-  display: grid;
-  grid-template-rows: 1fr;
   overflow: hidden;
-  transition: grid-template-rows 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+  /* Generous upper bound: larger than any panel's natural height so the open
+     state is never clipped. The collapse animates this down to 0. */
+  max-height: 600px;
+  transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
   margin-top: 10px;
   opacity: 1;
 }
 
-.collapsible-body > * {
-  /* Prevent content from overflowing during collapse */
-  min-height: 0;
-  overflow: hidden;
-}
-
 .collapsed .collapsible-body {
-  grid-template-rows: 0fr;
+  /* Closed: zero height + no margin, so the panel is just the header plus
+     its top/bottom padding. */
+  max-height: 0;
   opacity: 0;
   margin-top: 0;
   pointer-events: none;
@@ -786,6 +793,22 @@ body {
   display: none;
 }
 
+/* Auto-advance lives in the controls column but only applies to exercises mode */
+#ex-auto-panel {
+  display: none;
+}
+.mode-exercises #ex-auto-panel {
+  display: block;
+}
+
+/* Sound panel is collapsible but neutral — no green "active" accent when open */
+#sound-panel:not(.collapsed) {
+  border-color: var(--panel-border);
+}
+#sound-panel:not(.collapsed) .collapsible-header {
+  color: var(--dim);
+}
+
 /* In polyrhythm mode: hide the single sound selector, show per-rhythm selectors */
 #poly-sound-panel {
   display: none;
@@ -1020,13 +1043,29 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.ex-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .ex-preview-label {
-  text-align: center;
   color: var(--dim);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
   opacity: 0.6;
+}
+
+.ex-random-toggle {
+  font-size: 13px;
+  gap: 6px;
+}
+
+.ex-random-toggle input {
+  width: 16px;
+  height: 16px;
 }
 
 .ex-preview-viewport {
@@ -1104,8 +1143,10 @@ body {
     width: min(44vw, 480px);
   }
 
-  /* On desktop the exercise can stretch wider than the circle column */
-  .circle-col .exercise {
+  /* On desktop the exercise — and the sound panel below it — stretch wider
+     than the circle column, staying aligned with each other. */
+  .circle-col .exercise,
+  .circle-col #sound-panel {
     width: min(56vw, 640px);
   }
 

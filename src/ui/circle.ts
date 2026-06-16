@@ -1,4 +1,13 @@
-import { BEATS_MAX, POLY_A_MAX, POLY_B_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
+import {
+  BEATS_MAX,
+  BPM_MAX,
+  BPM_MIN,
+  POLY_A_MAX,
+  POLY_B_MAX,
+  SUBDIVISIONS,
+  isSubMuted,
+  type Settings,
+} from '../state';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW = 360;
@@ -42,6 +51,13 @@ function el<K extends keyof SVGElementTagNameMap>(
 /** Tick angle in degrees: first beat at the top, clockwise */
 function tickAngle(index: number, total: number): number {
   return (index / total) * 360 - 90;
+}
+
+/** Tempo dial color: cool (blue) at slow tempo → warm (red) at fast tempo. */
+function bpmColor(bpm: number): string {
+  const t = Math.min(1, Math.max(0, (bpm - BPM_MIN) / (BPM_MAX - BPM_MIN)));
+  const hue = 210 - t * 210; // 210° blue → 0° red
+  return `hsl(${hue.toFixed(0)} 75% 60%)`;
 }
 
 /** Rotation step normalized to (-180, 180]: crossing the top causes no full-turn jump */
@@ -168,8 +184,8 @@ export class CircleView {
     this.dialHit = el('circle', { class: 'dial-hit', cx: CX, cy: CY, r: DIAL_R });
     this.dialHit.addEventListener('pointerdown', (event) => this.dialDown(event));
     this.dialHit.addEventListener('pointermove', (event) => this.dialMove(event));
-    this.dialHit.addEventListener('pointerup', () => (this.dialDrag = null));
-    this.dialHit.addEventListener('pointercancel', () => (this.dialDrag = null));
+    this.dialHit.addEventListener('pointerup', () => this.dialUp());
+    this.dialHit.addEventListener('pointercancel', () => this.dialUp());
     this.buildDialArrows();
 
     this.selDecor = this.buildSelectorBands([
@@ -277,11 +293,17 @@ export class CircleView {
   private dialDown(event: PointerEvent): void {
     event.preventDefault();
     (event.target as Element).setPointerCapture(event.pointerId);
+    this.dialTrack.classList.add('grabbing');
     this.dialDrag = {
       startValue: this.callbacks.dial.start(),
       lastAngle: this.pointerAngle(event),
       totalDeg: 0,
     };
+  }
+
+  private dialUp(): void {
+    this.dialDrag = null;
+    this.dialTrack.classList.remove('grabbing');
   }
 
   private dialMove(event: PointerEvent): void {
@@ -317,6 +339,7 @@ export class CircleView {
   /** Rebuilds the dots to match the current settings (call on every change) */
   render(settings: Settings): void {
     const { beats, subdivision, beatStates, mutedSubs } = settings;
+    this.dialTrack.style.setProperty('--dial-color', bpmColor(settings.bpm));
     if (this.polyMode) {
       // Leaving polyrhythm mode: force a full metronome rebuild
       this.polyMode = false;

@@ -51,38 +51,69 @@
                 <select id="ex-topic"></select>
               </label>
             </div>
-            <!-- Collapsible auto-advance panel -->
-            <div class="control-group collapsible-panel" id="ex-auto-panel">
-              <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
-              <div class="collapsible-body" id="ex-auto-body">
-                <div class="trainer-row" id="ex-auto-row" style="margin-top:10px">
-                  <span class="trainer-lbl">every</span>
-                  <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-dec">−15s</button>
-                  <span class="trainer-num" id="ex-delta-num">20</span>
-                  <span class="trainer-unit">s</span>
-                  <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-inc">+15s</button>
-                </div>
-                <label class="toggle" style="margin-top:8px">
-                  <input type="checkbox" id="ex-random" />
-                  <span>Random</span>
-                </label>
-                <!-- Next exercise preview (shown 20s before auto-advance) -->
-                <div class="ex-preview" id="ex-preview" hidden>
-                  <div class="ex-preview-label" id="ex-preview-label">Next</div>
-                  <div class="ex-preview-viewport" id="ex-preview-viewport">
-                    <img id="ex-preview-img" alt="Next exercise" />
-                  </div>
-                </div>
-              </div>
-            </div>
             <p class="exercise-empty" id="ex-empty" hidden>
               No exercises yet. Add images and descriptors under
               <code>public/content/</code> — see <code>HOWTO.md</code>.
             </p>
           </section>
+
+          <!-- Sound + volume, aligned under the exercise sheet -->
+          <div class="control-group collapsible-panel group-sound" id="sound-panel">
+            <div class="collapsible-header" id="sound-toggle" role="button" tabindex="0">Sound</div>
+            <div class="collapsible-body">
+              <!-- Single sound selector (metronome / exercises mode) -->
+              <div class="row seg" id="sound-seg"></div>
+              <!-- Per-rhythm sound selectors (polyrhythm mode) -->
+              <div class="poly-sound-panel" id="poly-sound-panel">
+                <div class="poly-sound-row">
+                  <span class="poly-lbl poly-lbl-a">master</span>
+                  <div class="row seg" id="poly-sound-a-seg"></div>
+                </div>
+                <div class="poly-sound-row">
+                  <span class="poly-lbl poly-lbl-b">slave</span>
+                  <div class="row seg" id="poly-sound-b-seg"></div>
+                </div>
+              </div>
+              <div class="balance-label">Clicks vs beats</div>
+              <div class="row seg" id="balance-seg"></div>
+              <div class="balance-label">Volume</div>
+              <div class="row group-volume">
+                <span class="volume-icon">🔈</span>
+                <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
+                <span class="volume-icon">🔊</span>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="controls">
+          <!-- Collapsible auto-advance panel (exercises mode only) -->
+          <div class="control-group collapsible-panel" id="ex-auto-panel">
+            <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
+            <div class="collapsible-body" id="ex-auto-body">
+              <div class="trainer-row" id="ex-auto-row">
+                <span class="trainer-lbl">every</span>
+                <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-dec">−15s</button>
+                <span class="trainer-num" id="ex-delta-num">20</span>
+                <span class="trainer-unit">s</span>
+                <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-inc">+15s</button>
+              </div>
+              <!-- Next exercise preview (shown immediately while auto-advance is on) -->
+              <div class="ex-preview" id="ex-preview" hidden>
+                <div class="ex-preview-head">
+                  <div class="ex-preview-label" id="ex-preview-label">Next</div>
+                  <label class="toggle ex-random-toggle">
+                    <input type="checkbox" id="ex-random" />
+                    <span>Random</span>
+                  </label>
+                </div>
+                <div class="ex-preview-viewport" id="ex-preview-viewport">
+                  <img id="ex-preview-img" alt="Next exercise" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Collapsible Speed trainer panel -->
           <div class="control-group collapsible-panel" id="trainer-panel">
             <div class="collapsible-header" id="trainer-toggle" role="button" tabindex="0">Speed trainer</div>
@@ -169,37 +200,10 @@
             <div class="poly-ratio" id="poly-ratio">3 : 2</div>
           </div>
 
-          <div class="control-group group-sound">
-            <div class="group-label">Sound</div>
-            <!-- Single sound selector (metronome / exercises mode) -->
-            <div class="row seg" id="sound-seg"></div>
-            <!-- Per-rhythm sound selectors (polyrhythm mode) -->
-            <div class="poly-sound-panel" id="poly-sound-panel">
-              <div class="poly-sound-row">
-                <span class="poly-lbl poly-lbl-a">master</span>
-                <div class="row seg" id="poly-sound-a-seg"></div>
-              </div>
-              <div class="poly-sound-row">
-                <span class="poly-lbl poly-lbl-b">slave</span>
-                <div class="row seg" id="poly-sound-b-seg"></div>
-              </div>
-            </div>
-            <div class="balance-label">Clicks vs beats</div>
-            <div class="row seg" id="balance-seg"></div>
-          </div>
         </section>
       </main>
 
       <footer class="page-bottom">
-        <div class="control-group group-volume">
-          <div class="group-label">Volume</div>
-          <div class="row">
-            <span class="volume-icon">🔈</span>
-            <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
-            <span class="volume-icon">🔊</span>
-          </div>
-        </div>
-
         <p class="hint">
           Space — start/stop. Tap a dot on the circle:
           normal → accent → tick → mute. Tap a small subdivision dot to

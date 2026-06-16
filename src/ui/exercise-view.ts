@@ -50,9 +50,6 @@ export class ExerciseView {
   /** Whether auto-advance animation is active (replaces the old setInterval). */
   private autoActive = false;
 
-  /** Seconds before auto-advance at which the next exercise preview appears. */
-  private static readonly PREVIEW_LEAD_SEC = 20;
-
   private readonly root = byId<HTMLElement>('exercise-view');
   private readonly viewport = byId<HTMLDivElement>('ex-viewport');
   private readonly img = byId<HTMLImageElement>('ex-img');
@@ -82,7 +79,11 @@ export class ExerciseView {
     byId<HTMLButtonElement>('ex-next').addEventListener('click', () => this.step(1));
     this.pageSel.addEventListener('change', () => this.setFilter({ page: this.pageSel.value }));
     this.topicSel.addEventListener('change', () => this.setFilter({ topic: this.topicSel.value }));
-    this.randomChk.addEventListener('change', () => this.patch({ random: this.randomChk.checked }));
+    this.randomChk.addEventListener('change', () => {
+      // Re-pick the previewed item so it reflects the new sequential/random mode.
+      this.cachedNextItem = null;
+      this.patch({ random: this.randomChk.checked });
+    });
     // Click the header to toggle auto-advance on/off
     this.autoToggle.addEventListener('click', () => this.toggleAuto());
     // ±15s drag buttons, mirroring the speed trainer "every" control.
@@ -92,6 +93,8 @@ export class ExerciseView {
     // Re-frame the current item when the viewport width changes.
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(() => this.render()).observe(this.viewport);
+      // The preview lives in the controls column with its own width.
+      new ResizeObserver(() => this.refreshPreview()).observe(this.previewViewport);
     }
     this.store.subscribe(() => {
       this.syncControls();
@@ -143,6 +146,7 @@ export class ExerciseView {
     this.root.hidden = true;
     this.stopAuto();
     this.hideProgress();
+    this.hidePreview();
   }
 
   /**
@@ -209,12 +213,12 @@ export class ExerciseView {
     // Use the cached preview item when available so the user sees exactly
     // the exercise that was previewed (important for random mode).
     const target = this.cachedNextItem ?? pickNext(this.filtered(), this.s().currentId, this.s().random);
+    // Clear the preview first so the store update re-picks the *next* next item.
+    this.hidePreview();
     if (target) this.patch({ currentId: target.id });
     // Reset the progress timer for the next interval.
     this.autoStartedAt = performance.now();
     this.pendingAdvance = false;
-    // Hide the preview so it can reappear for the next cycle.
-    this.hidePreview();
   }
 
   /**
@@ -286,7 +290,6 @@ export class ExerciseView {
     this.progressBar.hidden = true;
     this.progressFill.style.width = '0%';
     this.clearCountdownBadge();
-    this.hidePreview();
   }
 
   /** Remove the countdown <span> from the caption if present. */
@@ -321,7 +324,6 @@ export class ExerciseView {
         // Countdown expired — mark as pending; the actual switch happens
         // on the next measure start (beat 0) via onMeasureStart().
         this.pendingAdvance = true;
-        this.ensurePreview();
       }
 
       // While pending, keep the bar full and show "waiting…" instead of 0s.
@@ -332,11 +334,6 @@ export class ExerciseView {
         const fraction = Math.min(elapsed / sec, 1);
         this.progressFill.style.width = `${(fraction * 100).toFixed(1)}%`;
         this.setCountdownBadge(`${Math.ceil(remaining)}s`);
-      }
-
-      // Show the next exercise preview when within the lead window.
-      if (!this.pendingAdvance && remaining <= ExerciseView.PREVIEW_LEAD_SEC && remaining > 0) {
-        this.ensurePreview();
       }
 
       this.rafId = requestAnimationFrame(tick);
@@ -352,6 +349,21 @@ export class ExerciseView {
   }
 
   /* --- Next exercise preview --- */
+
+  /**
+   * Keep the next-exercise preview in sync with the auto-advance state: show it
+   * immediately whenever auto-advance is enabled (no longer only in the final
+   * lead-in seconds), and hide it when auto-advance is off.
+   */
+  private syncPreview(): void {
+    if (this.s().autoSec > 0 && !this.root.hidden) this.ensurePreview();
+    else this.hidePreview();
+  }
+
+  /** Re-frame the already-shown preview (e.g. after a width change). */
+  private refreshPreview(): void {
+    if (!this.preview.hidden && this.cachedNextItem) this.renderPreview(this.cachedNextItem);
+  }
 
   /** Show the preview if not already visible; compute and render the next item. */
   private ensurePreview(): void {
@@ -437,6 +449,7 @@ export class ExerciseView {
     this.autoPanel.classList.toggle('collapsed', !autoOn);
     this.autoNum.textContent = String(autoOn ? s.autoSec : this.lastAutoSec);
     this.syncAuto();
+    this.syncPreview();
   }
 
   /**
