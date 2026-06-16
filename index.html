@@ -55,16 +55,17 @@
             <div class="control-group collapsible-panel" id="ex-auto-panel">
               <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
               <div class="collapsible-body" id="ex-auto-body">
-                <div class="exercise-controls" style="margin-top:10px">
-                  <label>
-                    <input type="number" id="ex-auto-sec" min="2" max="120" value="20" aria-label="Auto-advance seconds" />
-                    <span class="ex-unit">s</span>
-                  </label>
-                  <label class="toggle">
-                    <input type="checkbox" id="ex-random" />
-                    <span>Random</span>
-                  </label>
+                <div class="trainer-row" id="ex-auto-row" style="margin-top:10px">
+                  <span class="trainer-lbl">every</span>
+                  <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-dec">−15s</button>
+                  <span class="trainer-num" id="ex-delta-num">20</span>
+                  <span class="trainer-unit">s</span>
+                  <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-inc">+15s</button>
                 </div>
+                <label class="toggle" style="margin-top:8px">
+                  <input type="checkbox" id="ex-random" />
+                  <span>Random</span>
+                </label>
                 <!-- Next exercise preview (shown 20s before auto-advance) -->
                 <div class="ex-preview" id="ex-preview" hidden>
                   <div class="ex-preview-label" id="ex-preview-label">Next</div>

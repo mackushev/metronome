@@ -78,14 +78,14 @@ describe('ExerciseView (jsdom integration)', () => {
   it('enabling Auto records the interval', async () => {
     const store = await mount();
     const autoToggle = document.getElementById('ex-auto-toggle') as HTMLDivElement;
-    const sec = document.getElementById('ex-auto-sec') as HTMLInputElement;
-    // Click the header to toggle auto-advance on (uses default 20s or input value)
+    const inc = document.getElementById('ex-delta-inc') as HTMLButtonElement;
+    // Click the header to toggle auto-advance on (restores the last value, default 20s)
     autoToggle.click();
-    expect(store.get().exercise.autoSec).toBe(20); // default from input
-    // Change the seconds input while auto is on
-    sec.value = '30';
-    sec.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(store.get().exercise.autoSec).toBe(30);
+    expect(store.get().exercise.autoSec).toBe(20);
+    // The +15s button raises the interval (pointerdown then pointerup without a drag = click).
+    inc.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 0 }));
+    inc.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 0 }));
+    expect(store.get().exercise.autoSec).toBe(35);
     // Click again to turn off
     autoToggle.click();
     expect(store.get().exercise.autoSec).toBe(0);

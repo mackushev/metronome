@@ -1075,22 +1075,6 @@ body {
   font-size: 14px;
 }
 
-.exercise-controls #ex-auto-sec {
-  width: 60px;
-  min-height: 38px;
-  padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 15px;
-}
-
-.ex-unit {
-  color: var(--dim);
-  font-size: 13px;
-}
-
 .exercise-empty {
   color: var(--dim);
   font-size: 14px;

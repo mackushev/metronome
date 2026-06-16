@@ -26,7 +26,7 @@ export interface ControlsCallbacks {
 }
 
 /** Bind a button that changes a numeric value; also supports up/down drag with lower sensitivity. */
-function bindDragBtn(
+export function bindDragBtn(
   btn: HTMLButtonElement,
   clickDelta: number,
   getVal: () => number,

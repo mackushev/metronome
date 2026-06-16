@@ -2,6 +2,7 @@ import { loadContent } from '../content/manifest';
 import { crop, filterItems, pickNext, step } from '../content/navigation';
 import type { ContentModel, Item } from '../content/types';
 import type { ExerciseState, Store } from '../state';
+import { bindDragBtn } from './controls';
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -60,7 +61,7 @@ export class ExerciseView {
   private readonly pageSel = byId<HTMLSelectElement>('ex-page');
   private readonly topicSel = byId<HTMLSelectElement>('ex-topic');
   private readonly autoToggle = byId<HTMLDivElement>('ex-auto-toggle');
-  private readonly autoSec = byId<HTMLInputElement>('ex-auto-sec');
+  private readonly autoNum = byId<HTMLSpanElement>('ex-delta-num');
   private readonly randomChk = byId<HTMLInputElement>('ex-random');
   private readonly autoPanel = byId<HTMLDivElement>('ex-auto-panel');
   private readonly progressBar = byId<HTMLDivElement>('ex-progress-bar');
@@ -84,7 +85,9 @@ export class ExerciseView {
     this.randomChk.addEventListener('change', () => this.patch({ random: this.randomChk.checked }));
     // Click the header to toggle auto-advance on/off
     this.autoToggle.addEventListener('click', () => this.toggleAuto());
-    this.autoSec.addEventListener('change', () => this.applyAutoSec());
+    // ±15s drag buttons, mirroring the speed trainer "every" control.
+    bindDragBtn(byId('ex-delta-dec'), -15, () => this.getSec(), (v) => this.setSec(v), 2, 600);
+    bindDragBtn(byId('ex-delta-inc'), +15, () => this.getSec(), (v) => this.setSec(v), 2, 600);
 
     // Re-frame the current item when the viewport width changes.
     if (typeof ResizeObserver !== 'undefined') {
@@ -233,16 +236,19 @@ export class ExerciseView {
       this.lastAutoSec = this.s().autoSec;
       this.patch({ autoSec: 0 });
     } else {
-      // Turn on — restore last value or use the input
-      const sec = Math.max(2, Number(this.autoSec.value) || this.lastAutoSec);
-      this.patch({ autoSec: sec });
+      // Turn on — restore last value
+      this.patch({ autoSec: this.lastAutoSec });
     }
   }
 
-  /** The seconds input changed while auto is on. */
-  private applyAutoSec(): void {
-    if (this.s().autoSec <= 0) return;
-    const sec = Math.max(2, Number(this.autoSec.value) || 0);
+  /** Current interval for the ±15s buttons (falls back to the last value when off). */
+  private getSec(): number {
+    return this.s().autoSec || this.lastAutoSec;
+  }
+
+  /** Set a new auto-advance interval from the ±15s buttons. */
+  private setSec(sec: number): void {
+    this.lastAutoSec = sec;
     this.patch({ autoSec: sec });
   }
 
@@ -253,16 +259,21 @@ export class ExerciseView {
   }
 
   private syncAuto(): void {
-    this.stopAuto();
-    const sec = this.s().autoSec;
-    if (sec > 0 && !this.root.hidden && this.playing) {
-      this.autoStartedAt = performance.now();
-      this.autoActive = true;
-      this.showProgress();
-      this.startProgressAnimation();
-    } else {
+    const shouldRun = this.s().autoSec > 0 && !this.root.hidden && this.playing;
+    if (!shouldRun) {
+      this.stopAuto();
       this.hideProgress();
+      return;
     }
+    // Already running: do NOT reset the countdown. syncControls() fires on every
+    // store change, and the speed trainer updates the BPM on every beat — if we
+    // restarted the timer here the countdown would never reach zero. The
+    // animation tick reads autoSec live, so an interval change still takes effect.
+    if (this.autoActive) return;
+    this.autoStartedAt = performance.now();
+    this.autoActive = true;
+    this.showProgress();
+    this.startProgressAnimation();
   }
 
   /* --- Progress bar & countdown animation --- */
@@ -424,9 +435,7 @@ export class ExerciseView {
     const autoOn = s.autoSec > 0;
     // Collapse/expand the auto-advance panel
     this.autoPanel.classList.toggle('collapsed', !autoOn);
-    if (document.activeElement !== this.autoSec && autoOn) {
-      this.autoSec.value = String(s.autoSec);
-    }
+    this.autoNum.textContent = String(autoOn ? s.autoSec : this.lastAutoSec);
     this.syncAuto();
   }
 
