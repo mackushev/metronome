@@ -31,7 +31,7 @@ describe('smoke: the app mounts', () => {
         return { getChannelData: () => new Float32Array(len) };
       }
       createBufferSource() {
-        return { buffer: null, connect: () => ({ connect() {} }), start() {} };
+        return { buffer: null, connect: () => ({ connect() {} }), start() {}, stop() {} };
       }
     };
     await import('./main');
@@ -48,7 +48,8 @@ describe('smoke: the app mounts', () => {
   });
 
   it('sound controls are built', () => {
-    expect(document.querySelectorAll('#sound-seg .seg-btn').length).toBe(3);
+    // The main-beat sound row offers only the two click timbres
+    expect(document.querySelectorAll('#sound-seg .seg-btn').length).toBe(2);
   });
 
   it('outer selectors: 8 dots per arc plus sector backdrops', () => {
@@ -123,62 +124,58 @@ describe('smoke: the app mounts', () => {
     expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(false);
   });
 
-  it('the Polyrhythm pill shows two rings of dots and hides the beat bar', () => {
+  it('the Polyrhythm pill shows the base ring plus voice rings and hides the beat bar', () => {
     (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
     expect(document.getElementById('app')!.classList.contains('mode-polyrhythm')).toBe(true);
     expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(true);
-    // default 3 : 2 — three outer "a" dots and two inner "b" dots
-    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(3);
-    expect(document.querySelectorAll('#circle .dot-poly-b').length).toBe(2);
-    // back to the metronome restores its dots
+    // base meter ticks (the beat count carries over from metronome mode) + voices 3,4,3,2
+    expect(document.querySelectorAll('#circle .dot-beat').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('#circle .dot-poly-v0').length).toBe(3);
+    expect(document.querySelectorAll('#circle .dot-poly-v1').length).toBe(4);
+    expect(document.querySelectorAll('#circle .dot-poly-v3').length).toBe(2);
+    // back to the metronome removes the voice rings
     (document.getElementById('mode-metronome') as HTMLButtonElement).click();
-    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(0);
+    expect(document.querySelectorAll('#circle .dot-poly').length).toBe(0);
     expect((document.getElementById('beat-bar') as HTMLElement).hidden).toBe(false);
   });
 
-  it('polyrhythm steppers change the pulse counts and rings', () => {
+  it('a voice pulse stepper changes that voice ring', () => {
     (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
-    (document.getElementById('poly-a-inc') as HTMLButtonElement).click();
-    expect(document.getElementById('poly-a-num')!.textContent).toBe('4');
-    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(4);
-    (document.getElementById('poly-a-dec') as HTMLButtonElement).click();
-    expect(document.getElementById('poly-a-num')!.textContent).toBe('3');
+    const row0 = document.querySelectorAll('#poly-voices .poly-voice')[0];
+    const [dec, inc] = row0.querySelectorAll<HTMLButtonElement>('.poly-voice-pulses .btn');
+    inc.click();
+    expect(row0.querySelector('.trainer-num')!.textContent).toBe('4');
+    expect(document.querySelectorAll('#circle .dot-poly-v0').length).toBe(4);
+    dec.click();
+    expect(row0.querySelector('.trainer-num')!.textContent).toBe('3');
+    expect(document.querySelectorAll('#circle .dot-poly-v0').length).toBe(3);
     (document.getElementById('mode-metronome') as HTMLButtonElement).click();
   });
 
-  it('polyrhythm outer arcs set the two pulse counts and fill up to the value', () => {
+  it('tapping a voice on/off dot disables and re-enables the whole voice', () => {
     (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
-    // Rhythm A arc (right): 9 dots (master max), rhythm B arc (left): 9 dots (slave max)
-    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a').length).toBe(9);
-    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-b').length).toBe(9);
-    // Each selector renders as dot, num, hit — tap the hit whose dot is poly-a, value 4
-    const polyAHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
-      h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-a'),
-    );
-    polyAHits[3].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    expect(document.getElementById('poly-a-num')!.textContent).toBe('4');
-    expect(document.querySelectorAll('#circle .dot-poly-a').length).toBe(4);
-    expect(document.querySelectorAll('#circle .sel-dot.sel-poly-a.filled').length).toBe(4);
-    // Rhythm B — tap value 7 on the left arc
-    const polyBHits = Array.from(document.querySelectorAll('#circle .sel-hit')).filter((h) =>
-      h.previousElementSibling?.previousElementSibling?.classList.contains('sel-poly-b'),
-    );
-    polyBHits[6].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    expect(document.getElementById('poly-b-num')!.textContent).toBe('7');
-    expect(document.querySelectorAll('#circle .dot-poly-b').length).toBe(7);
+    const row0 = document.querySelectorAll('#poly-voices .poly-voice')[0];
+    const toggle = row0.querySelector('.poly-voice-dot') as HTMLButtonElement;
+    toggle.click();
+    expect(toggle.classList.contains('off')).toBe(true);
+    expect(row0.classList.contains('disabled')).toBe(true);
+    expect(document.querySelectorAll('#circle .dot-poly-v0.disabled').length).toBeGreaterThan(0);
+    toggle.click();
+    expect(toggle.classList.contains('off')).toBe(false);
+    expect(document.querySelectorAll('#circle .dot-poly-v0.disabled').length).toBe(0);
     (document.getElementById('mode-metronome') as HTMLButtonElement).click();
   });
 
-  it('tapping a polyrhythm dot mutes only that single pulse', () => {
+  it('tapping a voice dot mutes only that single pulse', () => {
     (document.getElementById('mode-polyrhythm') as HTMLButtonElement).click();
-    let aDots = document.querySelectorAll('#circle .dot-poly-a');
-    aDots[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    aDots = document.querySelectorAll('#circle .dot-poly-a');
-    expect(aDots[1].classList.contains('muted')).toBe(true);
-    expect(aDots[0].classList.contains('muted')).toBe(false);
-    aDots[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    aDots = document.querySelectorAll('#circle .dot-poly-a');
-    expect(aDots[1].classList.contains('muted')).toBe(false);
+    let dots = document.querySelectorAll('#circle .dot-poly-v1');
+    dots[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    dots = document.querySelectorAll('#circle .dot-poly-v1');
+    expect(dots[1].classList.contains('muted')).toBe(true);
+    expect(dots[0].classList.contains('muted')).toBe(false);
+    dots[1].dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    dots = document.querySelectorAll('#circle .dot-poly-v1');
+    expect(dots[1].classList.contains('muted')).toBe(false);
     (document.getElementById('mode-metronome') as HTMLButtonElement).click();
   });
 

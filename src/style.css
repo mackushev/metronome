@@ -254,28 +254,6 @@ body {
   fill: var(--accent);
 }
 
-/* Polyrhythm outer arcs: right = rhythm A (beats), left = rhythm B (ticks).
-   Colors mirror the two dot rings (A = accent, B = beat). */
-.sel-dot.filled.sel-poly-a {
-  fill: var(--accent);
-  stroke: var(--accent);
-}
-.sel-dot.filled.sel-poly-b {
-  fill: var(--beat);
-  stroke: var(--beat);
-}
-.sel-band.band-poly-a {
-  stroke: var(--accent);
-}
-.sel-band.band-poly-b {
-  stroke: var(--beat);
-}
-.sel-zone-label.band-poly-a {
-  fill: var(--accent);
-}
-.sel-zone-label.band-poly-b {
-  fill: var(--beat);
-}
 
 /* --- Tempo dial --- */
 
@@ -349,7 +327,7 @@ body {
 .dot-beat.accent {
   fill: var(--accent);
   stroke: var(--accent);
-  r: 14;
+  r: 11;
 }
 
 .dot-beat.mute {
@@ -809,97 +787,116 @@ body {
   color: var(--dim);
 }
 
-/* In polyrhythm mode: hide the single sound selector, show per-rhythm selectors */
-#poly-sound-panel {
-  display: none;
-}
-.mode-polyrhythm #sound-seg {
-  display: none;
-}
-.mode-polyrhythm #poly-sound-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.poly-sound-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.poly-sound-row .seg {
-  flex: 1;
-}
+/* --- Polyrhythm voice panel --- */
 
 .group-poly .group-label {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
-.poly-row {
+.poly-voices {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
-  margin: 6px 0;
 }
 
-.poly-lbl {
-  width: 52px;
+.poly-voice {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.poly-voice-dot {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--voice-color);
+  background: var(--voice-color);
+  cursor: pointer;
+}
+/* Disabled voice: hollow dot */
+.poly-voice-dot.off {
+  background: transparent;
+}
+
+.poly-voice-label {
   font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.poly-lbl-a {
-  color: var(--accent);
-}
-.poly-lbl-b {
-  color: var(--beat);
-}
-
-.poly-ratio {
-  margin-top: 8px;
-  text-align: center;
-  font-size: 20px;
-  font-variant-numeric: tabular-nums;
   color: var(--dim);
 }
 
-/* --- Polyrhythm circle dots --- */
+/* A disabled voice row dims its controls (the on/off dot stays fully lit) */
+.poly-voice.disabled .poly-voice-label,
+.poly-voice.disabled .poly-voice-sound,
+.poly-voice.disabled .poly-voice-pulses,
+.poly-voice.disabled .poly-voice-vol {
+  opacity: 0.4;
+}
 
-/* Rhythm A pulses (outer ring): master */
-.dot-poly-a {
-  fill: var(--accent);
+.poly-voice-sound {
+  grid-column: 2;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.poly-voice-pulses {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.poly-voice-pulses .trainer-num {
+  min-width: 16px;
+  text-align: center;
+}
+
+.poly-voice-vol {
+  grid-column: 2 / -1;
+  width: 100%;
+}
+
+/* --- Polyrhythm circle: per-voice ring dots --- */
+
+/* The thin, barely-visible track each voice's dots sit on */
+.voice-guide {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 0.5;
+  opacity: 0.08;
+}
+
+.dot-poly {
   stroke: transparent;
-  stroke-width: 2.5;
-}
-.dot-poly-a.accent {
-  r: 14;
-  stroke: var(--accent);
-}
-/* Rhythm B pulses (inner ring): slave */
-.dot-poly-b {
-  fill: var(--beat);
-  stroke: var(--beat);
   stroke-width: 2.5;
   cursor: pointer;
 }
-.dot-poly-a.muted,
-.dot-poly-b.muted {
+.dot-poly-v0 { fill: #4dd6b8; }
+.dot-poly-v1 { fill: #6b8cff; }
+.dot-poly-v2 { fill: #f4a347; }
+.dot-poly-v3 { fill: #ef5d6c; }
+
+.dot-poly.accent {
+  r: 8.5;
+}
+.dot-poly.muted {
   fill: transparent;
   stroke: var(--dim);
   stroke-width: 2;
   opacity: 0.6;
 }
-/* Active highlight: keep the ring border in its own color, brighten only the fill */
-.dot-poly-a.active {
-  fill: var(--active);
-  stroke: var(--accent);
+/* A disabled voice is hidden entirely on the circle */
+.dot-poly.disabled {
+  display: none;
 }
-.dot-poly-b.active {
-  fill: var(--active);
-  stroke: var(--beat);
-}
-.poly-inner-ring {
-  opacity: 0.4;
-}
+/* Active highlight: brighten the fill, keep the voice color as the border */
+.dot-poly-v0.active { fill: var(--active); stroke: #4dd6b8; }
+.dot-poly-v1.active { fill: var(--active); stroke: #6b8cff; }
+.dot-poly-v2.active { fill: var(--active); stroke: #f4a347; }
+.dot-poly-v3.active { fill: var(--active); stroke: #ef5d6c; }
 
 /* --- Exercise viewer: full-width practice sheet below the metronome --- */
 

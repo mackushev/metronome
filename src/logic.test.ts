@@ -157,34 +157,31 @@ describe('speed trainer', () => {
 });
 
 describe('polyrhythm: cycle events', () => {
-  it('a 3:2 cycle yields five pulses sorted by position, sharing the downbeat', () => {
-    const events = polyEventsForCycle(3, 2);
+  it('a 3-beat base with one 2-pulse voice yields five events sorted by position', () => {
+    const events = polyEventsForCycle(3, [2]);
     expect(events).toHaveLength(5);
-    // Both rhythms fire at offset 0; rhythm A reads first on the tie
-    expect(events[0]).toEqual({ rhythm: 'a', index: 0, offset: 0 });
-    expect(events[1]).toEqual({ rhythm: 'b', index: 0, offset: 0 });
-    // The rest are sorted by their position around the cycle
+    // Base meter (-1) and the voice (0) both fire at offset 0; base reads first
+    expect(events[0]).toEqual({ stream: -1, index: 0, offset: 0 });
+    expect(events[1]).toEqual({ stream: 0, index: 0, offset: 0 });
     const offsets = events.map((e) => e.offset);
     expect(offsets).toEqual([...offsets].sort((x, y) => x - y));
   });
 
-  it('each rhythm contributes exactly its own pulse count', () => {
-    const events = polyEventsForCycle(4, 3);
-    expect(events.filter((e) => e.rhythm === 'a')).toHaveLength(4);
-    expect(events.filter((e) => e.rhythm === 'b')).toHaveLength(3);
-    // Pulses are evenly spaced within each rhythm
-    expect(events.filter((e) => e.rhythm === 'a').map((e) => e.offset)).toEqual([0, 0.25, 0.5, 0.75]);
+  it('base and each voice contribute exactly their own pulse count', () => {
+    const events = polyEventsForCycle(4, [3]);
+    expect(events.filter((e) => e.stream === -1)).toHaveLength(4);
+    expect(events.filter((e) => e.stream === 0)).toHaveLength(3);
+    // Base ticks are evenly spaced across the bar
+    expect(events.filter((e) => e.stream === -1).map((e) => e.offset)).toEqual([0, 0.25, 0.5, 0.75]);
   });
 
-  it('coincident offsets appear as consecutive events so both are scheduled', () => {
-    // 4:2 — rhythm B pulses at 0 and 0.5 coincide with rhythm A pulses
-    const events = polyEventsForCycle(4, 2);
+  it('handles several voices, sorting base first on coincident offsets', () => {
+    // base 4, voice0 2 — the voice pulses at 0 and 0.5 coincide with base ticks
+    const events = polyEventsForCycle(4, [2, 3]);
+    expect(events.filter((e) => e.stream === 0)).toHaveLength(2);
+    expect(events.filter((e) => e.stream === 1)).toHaveLength(3);
     const atZero = events.filter((e) => e.offset === 0);
-    expect(atZero).toHaveLength(2);
-    expect(atZero.map((e) => e.rhythm)).toEqual(['a', 'b']);
-    const atHalf = events.filter((e) => e.offset === 0.5);
-    expect(atHalf).toHaveLength(2);
-    expect(atHalf.map((e) => e.rhythm)).toEqual(['a', 'b']);
+    expect(atZero.map((e) => e.stream)).toEqual([-1, 0, 1]);
   });
 });
 

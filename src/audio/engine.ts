@@ -1,4 +1,4 @@
-import { CLICK_VOLUME_FACTOR, isSubMuted, type Settings } from '../state';
+import { CLICK_VOLUME_FACTOR, isSubMuted, type Settings, type SoundName } from '../state';
 import { scheduleSound, type TickKind } from './sounds';
 
 export interface Position {
@@ -6,24 +6,36 @@ export interface Position {
   subIndex: number;
 }
 
-/** One pulse in a polyrhythm cycle. offset is its position 0..1 around the cycle. */
+/**
+ * One pulse in a polyrhythm cycle. `stream` is -1 for the base meter (the
+ * metronome beats) or 0..n-1 for a limb voice. `offset` is its position 0..1
+ * around the cycle.
+ */
 export interface PolyEvent {
-  rhythm: 'a' | 'b';
+  stream: number;
   index: number;
   offset: number;
 }
 
+/** The base meter stream id (the audible "main rhythm" ticks). */
+export const BASE_STREAM = -1;
+
 /**
  * All pulses of one polyrhythm cycle, sorted by their position around the cycle.
- * Rhythm A fires `a` evenly spaced pulses, rhythm B fires `b` of them in the
- * very same span. The shared downbeat (offset 0) yields one event per rhythm.
+ * The base meter fires `baseTicks` evenly spaced ticks (beats × subdivision);
+ * each voice fires its own pulse count in the very same span. The shared downbeat
+ * (offset 0) yields one event per stream; the base meter sorts first so the
+ * downbeat reads as a beat.
  */
-export function polyEventsForCycle(a: number, b: number): PolyEvent[] {
+export function polyEventsForCycle(baseTicks: number, voicePulses: number[]): PolyEvent[] {
   const events: PolyEvent[] = [];
-  for (let i = 0; i < a; i++) events.push({ rhythm: 'a', index: i, offset: i / a });
-  for (let j = 0; j < b; j++) events.push({ rhythm: 'b', index: j, offset: j / b });
-  // Sort by time; on a tie keep rhythm A first (the downbeat reads as a beat).
-  events.sort((x, y) => x.offset - y.offset || (x.rhythm === y.rhythm ? 0 : x.rhythm === 'a' ? -1 : 1));
+  for (let i = 0; i < baseTicks; i++)
+    events.push({ stream: BASE_STREAM, index: i, offset: i / baseTicks });
+  voicePulses.forEach((pulses, v) => {
+    for (let j = 0; j < pulses; j++) events.push({ stream: v, index: j, offset: j / pulses });
+  });
+  // Sort by time; on a tie order by stream so the base meter (-1) comes first.
+  events.sort((x, y) => x.offset - y.offset || x.stream - y.stream);
   return events;
 }
 
@@ -31,10 +43,10 @@ export function polyEventsForCycle(a: number, b: number): PolyEvent[] {
 export interface PolyReadout {
   /** 0..1 position around the circle for the sweeping needle */
   phase: number;
-  /** Index of the most recently sounded pulse in rhythm A, or -1 */
-  aIndex: number;
-  /** Index of the most recently sounded pulse in rhythm B, or -1 */
-  bIndex: number;
+  /** Index of the most recently sounded base-meter tick, or -1 */
+  base: number;
+  /** Index of the most recently sounded pulse in each voice, or -1 */
+  voices: number[];
 }
 
 /** Pure transition to the next tick; extracted for tests */
@@ -67,7 +79,7 @@ interface ScheduledTick extends Position {
 /** A polyrhythm pulse already committed to the audio clock (for the UI read-out) */
 interface PolyScheduled {
   time: number;
-  rhythm: 'a' | 'b';
+  stream: number;
   index: number;
   cycleStart: number;
   cycleDur: number;
@@ -184,14 +196,15 @@ export class MetronomeEngine {
     this.running ? this.stop() : this.start();
   }
 
-  /** One-off click outside the main loop (for sound/volume/balance preview) */
-  preview(kind: TickKind = 'normal'): void {
+  /** One-off click outside the main loop (for sound/volume/balance preview).
+      Pass `sound` to preview a specific timbre (e.g. a polyrhythm voice). */
+  preview(kind: TickKind = 'normal', sound?: SoundName): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
     void ctx.resume().catch(() => {});
     const s = this.getSettings();
     this.master!.gain.value = s.volume;
-    scheduleSound(ctx, this.master!, s.sound, kind, ctx.currentTime + 0.02, CLICK_VOLUME_FACTOR[s.clickVolume]);
+    scheduleSound(ctx, this.master!, sound ?? s.sound, kind, ctx.currentTime + 0.02, CLICK_VOLUME_FACTOR[s.clickVolume]);
   }
 
   /**
@@ -221,20 +234,24 @@ export class MetronomeEngine {
     const now = this.ctx.currentTime;
     let phase = 0;
     let current: PolyScheduled | null = null;
-    let aIndex = -1;
-    let bIndex = -1;
+    let base = -1;
+    const voiceSettings = this.getSettings().polyrhythm.voices;
+    const voices = voiceSettings.map(() => -1);
     for (const ev of this.polyScheduled) {
       if (ev.time <= now) {
         current = ev;
-        if (ev.rhythm === 'a') aIndex = ev.index;
-        else bIndex = ev.index;
+        if (ev.stream === BASE_STREAM) base = ev.index;
+        // Disabled voices stay dark (they make no sound, so no highlight)
+        else if (ev.stream < voices.length && voiceSettings[ev.stream]?.enabled) {
+          voices[ev.stream] = ev.index;
+        }
       } else break;
     }
     if (current && current.cycleDur > 0) {
       phase = ((now - current.cycleStart) / current.cycleDur) % 1;
       if (phase < 0) phase += 1;
     }
-    return { phase, aIndex, bIndex };
+    return { phase, base, voices };
   }
 
   private schedule(): void {
@@ -275,24 +292,27 @@ export class MetronomeEngine {
   }
 
   /**
-   * Polyrhythm loop. Both rhythms share one cycle whose length is set by rhythm
-   * A: `a` pulses, each one quarter-note long at the current BPM. Rhythm B fits
-   * its `b` pulses into that very same span. Rhythm A sounds as beats (downbeat
-   * accented), rhythm B as ghost-style ticks; either pulse can be muted.
+   * Polyrhythm loop. The base meter defines one cycle: `beats × subdivision`
+   * ticks across one bar at the current BPM, sounding exactly like the metronome
+   * (beats, accents, ghost subdivision ticks, per-tick mutes). On top of it each
+   * limb voice spreads its own pulse count across the very same bar, with its own
+   * sound and volume; a voice can be disabled, muted per pulse, or accented on 1.
    */
   private schedulePoly(): void {
     const ctx = this.ctx!;
     while (this.nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
       const s = this.getSettings();
-      const a = s.polyrhythm.a;
-      const b = s.polyrhythm.b;
-      const cycleDur = (60 / s.bpm) * a;
-      const key = `${a}:${b}`;
+      const beats = s.beats;
+      const sub = s.subdivision;
+      const baseTicks = beats * sub;
+      const voices = s.polyrhythm.voices;
+      const cycleDur = (60 / s.bpm) * beats;
+      const key = `${beats}:${sub}:${voices.map((v) => v.pulses).join(',')}`;
 
       // (Re)start a cycle when its events are exhausted or the counts changed
       if (this.polyCursor >= this.polyEvents.length || key !== this.polyKey) {
         if (key !== this.polyKey || Number.isNaN(this.polyCycleStart)) {
-          this.polyEvents = polyEventsForCycle(a, b);
+          this.polyEvents = polyEventsForCycle(baseTicks, voices.map((v) => v.pulses));
           this.polyKey = key;
           this.polyCycleStart = this.nextTime;
         } else {
@@ -310,23 +330,26 @@ export class MetronomeEngine {
         continue;
       }
 
-      const muted =
-        ev.rhythm === 'a'
-          ? s.polyrhythm.mutedA.includes(ev.index)
-          : s.polyrhythm.mutedB.includes(ev.index);
-      if (!muted) {
-        const kind: TickKind =
-          ev.rhythm === 'a' ? (ev.index === 0 ? 'accent' : 'normal') : 'sub';
-        const level =
-          ev.rhythm === 'a' ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
-        const sound = ev.rhythm === 'a' ? s.polyrhythm.soundA : s.polyrhythm.soundB;
-        this.master!.gain.value = s.volume;
-        scheduleSound(ctx, this.master!, sound, kind, time, level);
+      this.master!.gain.value = s.volume;
+      if (ev.stream === BASE_STREAM) {
+        // The base meter: identical to the metronome (beats + ghost subdivisions)
+        const pos = { beatIndex: Math.floor(ev.index / sub), subIndex: ev.index % sub };
+        const kind = tickKind(s, pos);
+        if (kind !== 'silent') {
+          const level = pos.subIndex === 0 ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
+          scheduleSound(ctx, this.master!, s.sound, kind, time, level);
+        }
+      } else {
+        const voice = voices[ev.stream];
+        if (voice && voice.enabled && !voice.muted.includes(ev.index)) {
+          const kind: TickKind = ev.index === 0 ? 'accent' : 'normal';
+          scheduleSound(ctx, this.master!, voice.sound, kind, time, 0.45, voice.volume);
+        }
       }
 
       this.polyScheduled.push({
         time,
-        rhythm: ev.rhythm,
+        stream: ev.stream,
         index: ev.index,
         cycleStart: this.polyCycleStart,
         cycleDur,

@@ -1,6 +1,6 @@
 /** tick — the beat sounds like a regular subdivision tick */
 export type BeatState = 'normal' | 'accent' | 'mute' | 'tick';
-export type SoundName = 'click' | 'beep' | 'cowbell';
+export type SoundName = 'click' | 'beep' | 'cowbell' | 'kick' | 'snare' | 'hihat' | 'ride';
 /** Loudness of subdivision clicks relative to beats */
 export type ClickVolume = 'soft' | 'medium' | 'equal';
 
@@ -8,24 +8,30 @@ export type ClickVolume = 'soft' | 'medium' | 'equal';
 export type AppMode = 'metronome' | 'exercises' | 'polyrhythm';
 
 /**
- * Polyrhythm: two independent pulse streams that share one cycle (the full
- * circle). Rhythm A ("beats") fires `a` evenly-spaced pulses per cycle, rhythm
- * B ("ticks") fires `b` of them in the very same span of time. Either pulse can
- * be individually muted.
+ * One polyrhythm voice (a limb). It fires `pulses` evenly-spaced hits across the
+ * shared cycle (one bar of the base meter). Any pulse can be individually muted.
+ */
+export interface PolyVoice {
+  /** Whether this voice sounds at all (toggled from the voices panel) */
+  enabled: boolean;
+  /** Number of evenly-spaced pulses across the bar */
+  pulses: number;
+  /** Sound timbre for this voice */
+  sound: SoundName;
+  /** Per-voice gain, 0..1 */
+  volume: number;
+  /** Indices of muted pulses */
+  muted: number[];
+}
+
+/**
+ * Polyrhythm: the base meter (the metronome's `beats`) defines the cycle and the
+ * audible "main rhythm" ticks; on top of it up to four independent limb voices
+ * each spread their own pulse count across the very same bar (e.g. 3-over-4).
  */
 export interface PolyrhythmSettings {
-  /** Number of pulses in rhythm A (master) per cycle */
-  a: number;
-  /** Number of pulses in rhythm B (slave) per cycle */
-  b: number;
-  /** Indices of muted pulses in rhythm A */
-  mutedA: number[];
-  /** Indices of muted pulses in rhythm B */
-  mutedB: number[];
-  /** Sound for rhythm A (master); defaults to the global sound */
-  soundA: SoundName;
-  /** Sound for rhythm B (slave); defaults to the global sound */
-  soundB: SoundName;
+  /** The four limb voices, fixed length POLY_VOICES */
+  voices: PolyVoice[];
 }
 
 export interface TrainerStage {
@@ -81,16 +87,27 @@ export const BPM_MAX = 300;
 export const BEATS_MIN = 1;
 export const BEATS_MAX = 8;
 export const SUBDIVISIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-/** Polyrhythm pulse counts. Both rhythms go up to 9 pulses per cycle. */
-export const POLY_MIN = 1;
-/** Max pulses in rhythm A (master) */
-export const POLY_A_MAX = 9;
-/** Max pulses in rhythm B (slave) */
-export const POLY_B_MAX = 9;
+/** Number of polyrhythm limb voices. */
+export const POLY_VOICES = 4;
+/** Each voice fires 1..POLY_PULSES_MAX evenly-spaced pulses across the bar. */
+export const POLY_PULSES_MIN = 1;
+export const POLY_PULSES_MAX = 9;
 export const SOUNDS: { name: SoundName; label: string }[] = [
   { name: 'click', label: 'Click' },
   { name: 'beep', label: 'Beep' },
   { name: 'cowbell', label: 'Cowbell' },
+  { name: 'ride', label: 'Ride' },
+  { name: 'snare', label: 'Snare' },
+  { name: 'hihat', label: 'Hi-hat' },
+  { name: 'kick', label: 'Kick' },
+];
+
+/** Display label + ring color for each polyrhythm voice (index 0..POLY_VOICES-1). */
+export const VOICE_META: { label: string; color: string }[] = [
+  { label: 'Voice 1', color: '#4dd6b8' },
+  { label: 'Voice 2', color: '#6b8cff' },
+  { label: 'Voice 3', color: '#f4a347' },
+  { label: 'Voice 4', color: '#ef5d6c' },
 ];
 
 /** Gain multiplier for subdivision clicks per balance position */
@@ -144,6 +161,16 @@ export function cycleBeatState(state: BeatState): BeatState {
   }
 }
 
+/** Default drum-kit layout for the four limb voices. */
+export function defaultVoices(): PolyVoice[] {
+  return [
+    { enabled: true, pulses: 3, sound: 'ride', volume: 0.8, muted: [] },
+    { enabled: true, pulses: 4, sound: 'snare', volume: 0.8, muted: [] },
+    { enabled: true, pulses: 3, sound: 'hihat', volume: 0.8, muted: [] },
+    { enabled: true, pulses: 2, sound: 'kick', volume: 0.8, muted: [] },
+  ];
+}
+
 const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: null };
 
 export function defaultSettings(): Settings {
@@ -159,34 +186,35 @@ export function defaultSettings(): Settings {
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
     exercise: { enabled: false, currentId: null, page: '', topic: '', random: false, autoSec: 0 },
-    polyrhythm: { a: 3, b: 2, mutedA: [], mutedB: [], soundA: 'click', soundB: 'click' },
+    polyrhythm: { voices: defaultVoices() },
   };
 }
 
 function parsePolyrhythm(raw: unknown, fallback: PolyrhythmSettings): PolyrhythmSettings {
   const p = raw as Record<string, unknown> | undefined;
-  if (!p) return fallback;
-  const clampCount = (v: unknown, def: number, max: number): number => {
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.min(max, Math.max(POLY_MIN, Math.round(n))) : def;
-  };
-  const a = clampCount(p.a, fallback.a, POLY_A_MAX);
-  const b = clampCount(p.b, fallback.b, POLY_B_MAX);
-  const cleanMuted = (v: unknown, count: number): number[] =>
-    Array.isArray(v)
-      ? v
-          .map((x) => Number(x))
-          .filter((x) => Number.isInteger(x) && x >= 0 && x < count)
-      : [];
+  const rawVoices = p?.voices;
+  if (!Array.isArray(rawVoices)) return fallback;
   const validSound = (v: unknown, def: SoundName): SoundName =>
     SOUNDS.some((s) => s.name === v) ? (v as SoundName) : def;
-  return {
-    a, b,
-    mutedA: cleanMuted(p.mutedA, a),
-    mutedB: cleanMuted(p.mutedB, b),
-    soundA: validSound(p.soundA, fallback.soundA),
-    soundB: validSound(p.soundB, fallback.soundB),
-  };
+  const voices = fallback.voices.map((def, i) => {
+    const v = rawVoices[i] as Record<string, unknown> | undefined;
+    if (!v) return { ...def };
+    const n = Number(v.pulses);
+    const pulses = Number.isFinite(n)
+      ? Math.min(POLY_PULSES_MAX, Math.max(POLY_PULSES_MIN, Math.round(n)))
+      : def.pulses;
+    const vol = Number(v.volume);
+    return {
+      enabled: typeof v.enabled === 'boolean' ? v.enabled : def.enabled,
+      pulses,
+      sound: validSound(v.sound, def.sound),
+      volume: Number.isFinite(vol) ? Math.min(1, Math.max(0, vol)) : def.volume,
+      muted: Array.isArray(v.muted)
+        ? v.muted.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x >= 0 && x < pulses)
+        : [],
+    };
+  });
+  return { voices };
 }
 
 function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {

@@ -1,9 +1,13 @@
 import {
   BPM_MIN,
   BPM_MAX,
+  POLY_PULSES_MIN,
+  POLY_PULSES_MAX,
   SOUNDS,
+  VOICE_META,
   clampBpm,
   type ClickVolume,
+  type PolyVoice,
   type SoundName,
   type Store,
   type TrainerSettings,
@@ -23,6 +27,8 @@ function byId<T extends HTMLElement>(id: string): T {
 
 export interface ControlsCallbacks {
   onSoundPreview: (kind?: 'normal' | 'sub') => void;
+  /** Preview a specific voice's sound (when its sound/volume is changed) */
+  onVoicePreview: (sound: SoundName) => void;
 }
 
 /** Bind a button that changes a numeric value; also supports up/down drag with lower sensitivity. */
@@ -251,8 +257,9 @@ function bindTrainer(store: Store): void {
 function buildSoundButtons(
   container: HTMLElement,
   onSelect: (name: SoundName) => void,
+  sounds: { name: SoundName; label: string }[] = SOUNDS,
 ): void {
-  for (const { name, label } of SOUNDS) {
+  for (const { name, label } of sounds) {
     const btn = document.createElement('button');
     btn.className = 'btn seg-btn';
     btn.textContent = label;
@@ -269,31 +276,115 @@ function syncSoundButtons(container: HTMLElement, selected: SoundName): void {
   }
 }
 
+/** Update one voice in the store, dropping muted pulses outside a shrunk count. */
+function updateVoice(store: Store, index: number, patch: Partial<PolyVoice>): void {
+  const voices = store.get().polyrhythm.voices.map((v, i) => {
+    if (i !== index) return v;
+    const next = { ...v, ...patch };
+    if (patch.pulses !== undefined) next.muted = next.muted.filter((m) => m < next.pulses);
+    return next;
+  });
+  store.update({ polyrhythm: { voices } });
+}
+
+/** Build the per-voice polyrhythm panel: sound select, pulse stepper, volume. */
+function bindPolyVoices(store: Store, callbacks: ControlsCallbacks): void {
+  const container = byId<HTMLDivElement>('poly-voices');
+  const rows = store.get().polyrhythm.voices.map((_, i) => {
+    const meta = VOICE_META[i];
+    const row = document.createElement('div');
+    row.className = 'poly-voice';
+
+    // Tap the colored dot to enable/disable the whole voice
+    const dot = document.createElement('button');
+    dot.className = 'poly-voice-dot';
+    dot.style.setProperty('--voice-color', meta.color);
+    dot.setAttribute('aria-label', `${meta.label} on/off`);
+    dot.addEventListener('click', () =>
+      updateVoice(store, i, { enabled: !store.get().polyrhythm.voices[i].enabled }),
+    );
+    const label = document.createElement('span');
+    label.className = 'poly-voice-label';
+    label.textContent = meta.label;
+
+    const sound = document.createElement('select');
+    sound.className = 'poly-voice-sound';
+    for (const s of SOUNDS) {
+      const opt = document.createElement('option');
+      opt.value = s.name;
+      opt.textContent = s.label;
+      sound.append(opt);
+    }
+    sound.addEventListener('change', () => {
+      const name = sound.value as SoundName;
+      updateVoice(store, i, { sound: name });
+      callbacks.onVoicePreview(name);
+    });
+
+    const pulses = document.createElement('div');
+    pulses.className = 'poly-voice-pulses';
+    const dec = document.createElement('button');
+    dec.className = 'btn trainer-btn';
+    dec.textContent = '−';
+    const num = document.createElement('span');
+    num.className = 'trainer-num';
+    const inc = document.createElement('button');
+    inc.className = 'btn trainer-btn';
+    inc.textContent = '+';
+    const setPulses = (n: number): void =>
+      updateVoice(store, i, { pulses: Math.min(POLY_PULSES_MAX, Math.max(POLY_PULSES_MIN, n)) });
+    dec.addEventListener('click', () => setPulses(store.get().polyrhythm.voices[i].pulses - 1));
+    inc.addEventListener('click', () => setPulses(store.get().polyrhythm.voices[i].pulses + 1));
+    pulses.append(dec, num, inc);
+
+    const vol = document.createElement('input');
+    vol.type = 'range';
+    vol.className = 'poly-voice-vol';
+    vol.min = '0';
+    vol.max = '100';
+    vol.step = '1';
+    vol.setAttribute('aria-label', `${meta.label} volume`);
+    vol.addEventListener('input', () => updateVoice(store, i, { volume: Number(vol.value) / 100 }));
+    vol.addEventListener('change', () => callbacks.onVoicePreview(store.get().polyrhythm.voices[i].sound));
+
+    row.append(dot, label, sound, pulses, vol);
+    container.append(row);
+    return { row, dot, sound, num, vol };
+  });
+
+  const sync = (s: ReturnType<Store['get']>): void => {
+    s.polyrhythm.voices.forEach((voice, i) => {
+      rows[i].sound.value = voice.sound;
+      rows[i].num.textContent = String(voice.pulses);
+      rows[i].vol.value = String(Math.round(voice.volume * 100));
+      rows[i].row.classList.toggle('disabled', !voice.enabled);
+      rows[i].dot.classList.toggle('off', !voice.enabled);
+    });
+  };
+  store.subscribe(sync);
+  sync(store.get());
+}
+
 /** Binds the static settings panel markup to the store */
 export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   const soundSeg = byId<HTMLDivElement>('sound-seg');
-  const polySoundASeg = byId<HTMLDivElement>('poly-sound-a-seg');
-  const polySoundBSeg = byId<HTMLDivElement>('poly-sound-b-seg');
   const balanceSeg = byId<HTMLDivElement>('balance-seg');
   const volumeSlider = byId<HTMLInputElement>('volume-slider');
 
-  // --- Sound (single, metronome/exercises mode) ---
-  buildSoundButtons(soundSeg, (name) => {
-    store.update({ sound: name });
-    callbacks.onSoundPreview();
-  });
+  // --- Sound (main beat; also the polyrhythm base ticks) ---
+  // Only the two click-style timbres here; drum sounds live in the voice selects.
+  const beatSounds = SOUNDS.filter((s) => s.name === 'click' || s.name === 'beep');
+  buildSoundButtons(
+    soundSeg,
+    (name) => {
+      store.update({ sound: name });
+      callbacks.onSoundPreview();
+    },
+    beatSounds,
+  );
 
-  // --- Sound per rhythm (polyrhythm mode) ---
-  buildSoundButtons(polySoundASeg, (name) => {
-    const p = store.get().polyrhythm;
-    store.update({ polyrhythm: { ...p, soundA: name } });
-    callbacks.onSoundPreview();
-  });
-  buildSoundButtons(polySoundBSeg, (name) => {
-    const p = store.get().polyrhythm;
-    store.update({ polyrhythm: { ...p, soundB: name } });
-    callbacks.onSoundPreview('sub');
-  });
+  // --- Polyrhythm voices ---
+  bindPolyVoices(store, callbacks);
 
   // --- Clicks vs beats balance ---
   for (const { value, title } of CLICK_VOLUMES) {
@@ -328,8 +419,6 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   // --- Reflect state back into static controls ---
   store.subscribe((s) => {
     syncSoundButtons(soundSeg, s.sound);
-    syncSoundButtons(polySoundASeg, s.polyrhythm.soundA);
-    syncSoundButtons(polySoundBSeg, s.polyrhythm.soundB);
     for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
       btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
     }
@@ -339,8 +428,6 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   // Initial render
   const s = store.get();
   syncSoundButtons(soundSeg, s.sound);
-  syncSoundButtons(polySoundASeg, s.polyrhythm.soundA);
-  syncSoundButtons(polySoundBSeg, s.polyrhythm.soundB);
   for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
     btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
   }

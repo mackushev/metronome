@@ -19,10 +19,7 @@ function noopCallbacks(): CircleCallbacks {
     onBeatsSelect: vi.fn(),
     onSubdivSelect: vi.fn(),
     onSubToggle: vi.fn(),
-    onPolyToggleA: vi.fn(),
-    onPolyToggleB: vi.fn(),
-    onPolySelectA: vi.fn(),
-    onPolySelectB: vi.fn(),
+    onPolyToggle: vi.fn(),
   };
 }
 
@@ -167,65 +164,72 @@ describe('CircleView', () => {
   });
 
   describe('renderPoly (polyrhythm mode)', () => {
-    it('creates dots for both rhythms', () => {
-      circle.renderPoly(settings); // default 3:2
-      const dotsA = svg.querySelectorAll('.dot-poly-a');
-      const dotsB = svg.querySelectorAll('.dot-poly-b');
-      expect(dotsA.length).toBe(3);
-      expect(dotsB.length).toBe(2);
+    it('creates a base ring plus one dot ring per voice', () => {
+      circle.renderPoly(settings); // base 4 beats; voices 3,4,3,2
+      expect(svg.querySelectorAll('.dot-beat').length).toBe(settings.beats);
+      expect(svg.querySelectorAll('.dot-poly-v0').length).toBe(3);
+      expect(svg.querySelectorAll('.dot-poly-v1').length).toBe(4);
+      expect(svg.querySelectorAll('.dot-poly-v2').length).toBe(3);
+      expect(svg.querySelectorAll('.dot-poly-v3').length).toBe(2);
     });
 
-    it('rebuilds when ratio changes', () => {
+    it('rebuilds when a voice pulse count changes', () => {
       circle.renderPoly(settings);
-      settings.polyrhythm.a = 5;
-      settings.polyrhythm.b = 4;
+      settings.polyrhythm.voices[0].pulses = 5;
       circle.renderPoly(settings);
-      expect(svg.querySelectorAll('.dot-poly-a').length).toBe(5);
-      expect(svg.querySelectorAll('.dot-poly-b').length).toBe(4);
+      expect(svg.querySelectorAll('.dot-poly-v0').length).toBe(5);
     });
 
-    it('marks muted pulses in rhythm A', () => {
-      settings.polyrhythm.mutedA = [1];
+    it('marks muted pulses in a voice', () => {
+      settings.polyrhythm.voices[0].muted = [1];
       circle.renderPoly(settings);
-      const dotsA = svg.querySelectorAll('.dot-poly-a');
-      expect(dotsA[1]?.classList.contains('muted')).toBe(true);
-      expect(dotsA[0]?.classList.contains('muted')).toBe(false);
+      const dots = svg.querySelectorAll('.dot-poly-v0');
+      expect(dots[1]?.classList.contains('muted')).toBe(true);
+      expect(dots[0]?.classList.contains('muted')).toBe(false);
     });
 
-    it('marks muted pulses in rhythm B', () => {
-      settings.polyrhythm.mutedB = [0];
+    it('adds ghost subdivision dots to the base ring', () => {
+      settings.subdivision = 2;
       circle.renderPoly(settings);
-      const dotsB = svg.querySelectorAll('.dot-poly-b');
-      expect(dotsB[0]?.classList.contains('muted')).toBe(true);
+      // base = beats(4) × subdivision(2): 4 beat dots + 4 ghost sub dots
+      expect(svg.querySelectorAll('.dot-beat').length).toBe(4);
+      expect(svg.querySelectorAll('.dot-sub').length).toBe(4);
+    });
+
+    it('marks a disabled voice ring', () => {
+      settings.polyrhythm.voices[0].enabled = false;
+      circle.renderPoly(settings);
+      const dots = svg.querySelectorAll('.dot-poly-v0');
+      expect(dots[0]?.classList.contains('disabled')).toBe(true);
     });
   });
 
   describe('polyTick (polyrhythm animation)', () => {
-    it('highlights rhythm A dot and shows needle', () => {
+    it('highlights base + voice dots and shows the needle', () => {
       circle.renderPoly(settings);
-      circle.polyTick({ phase: 0, aIndex: 0, bIndex: -1 });
-      const dotsA = svg.querySelectorAll('.dot-poly-a');
-      expect(dotsA[0]?.classList.contains('active')).toBe(true);
+      circle.polyTick({ phase: 0, base: 0, voices: [1, -1, -1, -1] });
+      expect(svg.querySelectorAll('.dot-beat')[0]?.classList.contains('active')).toBe(true);
+      expect(svg.querySelectorAll('.dot-poly-v0')[1]?.classList.contains('active')).toBe(true);
       const needle = svg.querySelector('.needle') as SVGElement;
       expect(needle?.style.visibility).toBe('visible');
     });
 
     it('hides everything on null (stopped)', () => {
       circle.renderPoly(settings);
-      circle.polyTick({ phase: 0, aIndex: 0, bIndex: 1 });
+      circle.polyTick({ phase: 0, base: 0, voices: [0, 1, 0, 0] });
       circle.polyTick(null);
       const needle = svg.querySelector('.needle') as SVGElement;
       expect(needle?.style.visibility).toBe('hidden');
     });
 
-    it('fades out poly dot after POLY_HIGHLIGHT_MS', () => {
+    it('fades out a voice dot after POLY_HIGHLIGHT_MS', () => {
       vi.useFakeTimers();
       circle.renderPoly(settings);
-      circle.polyTick({ phase: 0, aIndex: 1, bIndex: 0 });
-      const dotsA = svg.querySelectorAll('.dot-poly-a');
-      expect(dotsA[1]?.classList.contains('active')).toBe(true);
+      circle.polyTick({ phase: 0, base: -1, voices: [2, -1, -1, -1] });
+      const dots = svg.querySelectorAll('.dot-poly-v0');
+      expect(dots[2]?.classList.contains('active')).toBe(true);
       vi.advanceTimersByTime(150);
-      expect(dotsA[1]?.classList.contains('active')).toBe(false);
+      expect(dots[2]?.classList.contains('active')).toBe(false);
       vi.useRealTimers();
     });
   });
@@ -263,30 +267,23 @@ describe('CircleView', () => {
       expect(callbacks.onSubToggle).toHaveBeenCalledWith(0, 1);
     });
 
-    it('fires onPolyToggleA when a rhythm A dot is tapped', () => {
+    it('fires onPolyToggle with the voice index and pulse when a voice dot is tapped', () => {
       circle.renderPoly(settings);
-      const dotA = svg.querySelectorAll('.dot-poly-a')[2];
-      dotA?.dispatchEvent(new Event('pointerdown'));
-      expect(callbacks.onPolyToggleA).toHaveBeenCalledWith(2);
-    });
-
-    it('fires onPolyToggleB when a rhythm B dot is tapped', () => {
-      circle.renderPoly(settings);
-      const dotB = svg.querySelectorAll('.dot-poly-b')[1];
-      dotB?.dispatchEvent(new Event('pointerdown'));
-      expect(callbacks.onPolyToggleB).toHaveBeenCalledWith(1);
+      const dot = svg.querySelectorAll('.dot-poly-v1')[2];
+      dot?.dispatchEvent(new Event('pointerdown'));
+      expect(callbacks.onPolyToggle).toHaveBeenCalledWith(1, 2);
     });
   });
 
   describe('mode switching', () => {
     it('can switch from poly to metronome mode cleanly', () => {
       circle.renderPoly(settings);
-      expect(svg.querySelectorAll('.dot-poly-a').length).toBe(3);
+      expect(svg.querySelectorAll('.dot-poly-v0').length).toBe(3);
 
       // Now switch to metronome
       circle.render(settings);
       expect(svg.querySelectorAll('.dot-beat').length).toBe(4);
-      expect(svg.querySelectorAll('.dot-poly-a').length).toBe(0);
+      expect(svg.querySelectorAll('.dot-poly').length).toBe(0);
     });
 
     it('can switch from metronome to poly mode cleanly', () => {
@@ -294,8 +291,8 @@ describe('CircleView', () => {
       expect(svg.querySelectorAll('.dot-beat').length).toBe(4);
 
       circle.renderPoly(settings);
-      expect(svg.querySelectorAll('.dot-poly-a').length).toBe(3);
-      expect(svg.querySelectorAll('.dot-poly-b').length).toBe(2);
+      expect(svg.querySelectorAll('.dot-poly-v0').length).toBe(3);
+      expect(svg.querySelectorAll('.dot-poly-v1').length).toBe(4);
     });
   });
 });

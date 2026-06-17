@@ -9,9 +9,6 @@ import {
   cycleBeatState,
   toggleSubMute,
   togglePolyMute,
-  POLY_MIN,
-  POLY_A_MAX,
-  POLY_B_MAX,
   type AppMode,
 } from './state';
 import {
@@ -63,16 +60,12 @@ const circle = new CircleView(svg, {
   onSubToggle: (beatIndex, subIndex) => {
     store.update({ mutedSubs: toggleSubMute(store.get().mutedSubs, beatIndex, subIndex) });
   },
-  onPolyToggleA: (index) => {
-    const p = store.get().polyrhythm;
-    store.update({ polyrhythm: { ...p, mutedA: togglePolyMute(p.mutedA, index) } });
+  onPolyToggle: (voice, pulse) => {
+    const voices = store.get().polyrhythm.voices.map((v, i) =>
+      i === voice ? { ...v, muted: togglePolyMute(v.muted, pulse) } : v,
+    );
+    store.update({ polyrhythm: { voices } });
   },
-  onPolyToggleB: (index) => {
-    const p = store.get().polyrhythm;
-    store.update({ polyrhythm: { ...p, mutedB: togglePolyMute(p.mutedB, index) } });
-  },
-  onPolySelectA: (count) => setPolyCountTo('a', count),
-  onPolySelectB: (count) => setPolyCountTo('b', count),
 });
 
 const beatBarEl = document.getElementById('beat-bar')!;
@@ -156,6 +149,7 @@ function setUserBpm(bpm: number): void {
 
 bindControls(store, {
   onSoundPreview: (kind) => engine.preview(kind ?? 'normal'),
+  onVoicePreview: (sound) => engine.preview('normal', sound),
 });
 
 // --- Mode switch: the three pills reshape the page ---
@@ -203,40 +197,7 @@ modePolyrhythm.addEventListener('click', () => setMode('polyrhythm'));
 // --- Browser back / forward: sync the mode from the URL ---
 onPopState((mode) => setMode(mode, true));
 
-// --- Polyrhythm a/b steppers ---
-const polyANum = document.getElementById('poly-a-num')!;
-const polyBNum = document.getElementById('poly-b-num')!;
-const polyRatio = document.getElementById('poly-ratio')!;
-
-function setPolyCountTo(which: 'a' | 'b', value: number): void {
-  const p = store.get().polyrhythm;
-  const max = which === 'a' ? POLY_A_MAX : POLY_B_MAX;
-  const next = Math.min(max, Math.max(POLY_MIN, value));
-  if (next === p[which]) return;
-  // Drop muted indices that fall outside the new count.
-  const mutedKey = which === 'a' ? 'mutedA' : 'mutedB';
-  const muted = (p[mutedKey] as number[]).filter((i) => i < next);
-  store.update({ polyrhythm: { ...p, [which]: next, [mutedKey]: muted } });
-}
-
-function setPolyCount(which: 'a' | 'b', delta: number): void {
-  setPolyCountTo(which, store.get().polyrhythm[which] + delta);
-}
-
-document.getElementById('poly-a-dec')!.addEventListener('click', () => setPolyCount('a', -1));
-document.getElementById('poly-a-inc')!.addEventListener('click', () => setPolyCount('a', +1));
-document.getElementById('poly-b-dec')!.addEventListener('click', () => setPolyCount('b', -1));
-document.getElementById('poly-b-inc')!.addEventListener('click', () => setPolyCount('b', +1));
-
-function syncPolyControls(): void {
-  const { a, b } = store.get().polyrhythm;
-  polyANum.textContent = String(a);
-  polyBNum.textContent = String(b);
-  polyRatio.textContent = `${a} : ${b}`;
-}
-
 syncMode();
-syncPolyControls();
 
 // The collapsible panels are collapsed by the syncs above; re-enable transitions
 // only after the browser has painted that initial (collapsed) state, so the
@@ -285,7 +246,6 @@ store.subscribe((s) => {
   if (s.mode === 'polyrhythm') circle.renderPoly(s);
   else circle.render(s);
   beatBar.render(s);
-  syncPolyControls();
   // Restart the trainer countdown only when its own parameters change
   const trainerNow = JSON.stringify(s.trainer);
   if (trainerNow !== prevTrainer) {
