@@ -423,6 +423,12 @@ body {
   gap: 14px;
 }
 
+/* Vertical layout: the sound panel is a direct child of .layout and sits below
+   everything else. It matches the other columns' width. */
+#sound-panel {
+  width: min(92vw, 440px);
+}
+
 .control-group {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -1101,6 +1107,11 @@ body {
   gap: 8px;
 }
 
+/* The Page field only appears once a topic is selected. */
+.exercise-controls > label[hidden] {
+  display: none;
+}
+
 .exercise-controls select {
   min-height: 38px;
   padding: 0 8px;
@@ -1129,26 +1140,40 @@ body {
     padding: 32px;
   }
 
+  /* Grid layout so the sound panel keeps sitting under the circle/exercise in
+     the left column, while the controls fill a full-height right column. */
   .layout {
-    flex-direction: row;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(0, min(56vw, 640px)) 360px;
+    grid-template-rows: auto auto;
+    align-items: start;
     justify-content: center;
-    gap: 40px;
+    column-gap: 40px;
+    row-gap: 12px;
   }
 
   .circle-col {
+    grid-column: 1;
+    grid-row: 1;
     width: min(44vw, 480px);
+  }
+
+  #sound-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .controls {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    width: 360px;
   }
 
   /* On desktop the exercise — and the sound panel below it — stretch wider
      than the circle column, staying aligned with each other. */
   .circle-col .exercise,
-  .circle-col #sound-panel {
+  #sound-panel {
     width: min(56vw, 640px);
-  }
-
-  .controls {
-    width: 360px;
   }
 
   .page-bottom {

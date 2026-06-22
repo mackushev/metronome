@@ -56,7 +56,11 @@ export class ExerciseView {
   private readonly caption = byId<HTMLDivElement>('ex-caption');
   private readonly empty = byId<HTMLParagraphElement>('ex-empty');
   private readonly pageSel = byId<HTMLSelectElement>('ex-page');
+  private readonly pageField = byId<HTMLLabelElement>('ex-page-field');
   private readonly topicSel = byId<HTMLSelectElement>('ex-topic');
+
+  /** The topic the page picker is currently populated for (avoids rebuilding it every sync). */
+  private pagesPopulatedFor: string | null = null;
   private readonly autoToggle = byId<HTMLDivElement>('ex-auto-toggle');
   private readonly autoNum = byId<HTMLSpanElement>('ex-delta-num');
   private readonly randomChk = byId<HTMLInputElement>('ex-random');
@@ -78,7 +82,11 @@ export class ExerciseView {
     byId<HTMLButtonElement>('ex-prev').addEventListener('click', () => this.step(-1));
     byId<HTMLButtonElement>('ex-next').addEventListener('click', () => this.step(1));
     this.pageSel.addEventListener('change', () => this.setFilter({ page: this.pageSel.value }));
-    this.topicSel.addEventListener('change', () => this.setFilter({ topic: this.topicSel.value }));
+    // Choosing a topic resets the page filter — the page picker then lists only
+    // the pages that belong to that topic (and is hidden while no topic is set).
+    this.topicSel.addEventListener('change', () =>
+      this.setFilter({ topic: this.topicSel.value, page: '' }),
+    );
     this.randomChk.addEventListener('change', () => {
       // Re-pick the previewed item so it reflects the new sequential/random mode.
       this.cachedNextItem = null;
@@ -415,23 +423,43 @@ export class ExerciseView {
     this.cachedNextItem = null;
   }
 
+  private fillSelect(
+    sel: HTMLSelectElement,
+    allLabel: string,
+    list: { id: string; title: string }[],
+  ): void {
+    sel.innerHTML = '';
+    const all = document.createElement('option');
+    all.value = '';
+    all.textContent = allLabel;
+    sel.append(all);
+    for (const t of list) {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.title;
+      sel.append(opt);
+    }
+  }
+
   private populatePickers(): void {
     if (!this.model) return;
-    const fill = (sel: HTMLSelectElement, allLabel: string, list: { id: string; title: string }[]) => {
-      sel.innerHTML = '';
-      const all = document.createElement('option');
-      all.value = '';
-      all.textContent = allLabel;
-      sel.append(all);
-      for (const t of list) {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.title;
-        sel.append(opt);
-      }
-    };
-    fill(this.pageSel, 'All pages', this.model.pages);
-    fill(this.topicSel, 'All topics', this.model.topics);
+    this.fillSelect(this.topicSel, 'All topics', this.model.topics);
+    this.populatePages(this.s().topic);
+  }
+
+  /** Pages that contain items of the given topic, in global page order. */
+  private pagesForTopic(topic: string): { id: string; title: string }[] {
+    if (!this.model) return [];
+    if (!topic) return this.model.pages;
+    const present = new Set((this.model.itemsByTopic.get(topic) ?? []).map((it) => it.page));
+    return this.model.pages.filter((p) => present.has(p.id));
+  }
+
+  /** Rebuild the page picker for `topic` and remember what it was built for. */
+  private populatePages(topic: string): void {
+    if (!this.model) return;
+    this.fillSelect(this.pageSel, 'All pages', this.pagesForTopic(topic));
+    this.pagesPopulatedFor = topic;
   }
 
   private showEmpty(): void {
@@ -441,8 +469,12 @@ export class ExerciseView {
 
   private syncControls(): void {
     const s = this.s();
-    this.pageSel.value = s.page;
     this.topicSel.value = s.topic;
+    // The page picker is filtered by the selected topic and only shown once a
+    // topic is chosen. Rebuild it only when the topic actually changed.
+    if (this.pagesPopulatedFor !== s.topic) this.populatePages(s.topic);
+    this.pageField.hidden = !s.topic;
+    this.pageSel.value = s.page;
     this.randomChk.checked = s.random;
     const autoOn = s.autoSec > 0;
     // Collapse/expand the auto-advance panel

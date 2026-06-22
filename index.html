@@ -44,11 +44,11 @@
               </div>
             </div>
             <div class="exercise-controls">
-              <label>Page
-                <select id="ex-page"></select>
-              </label>
               <label>Topic
                 <select id="ex-topic"></select>
+              </label>
+              <label id="ex-page-field" hidden>Page
+                <select id="ex-page"></select>
               </label>
             </div>
             <p class="exercise-empty" id="ex-empty" hidden>
@@ -56,23 +56,6 @@
               <code>public/content/</code> — see <code>HOWTO.md</code>.
             </p>
           </section>
-
-          <!-- Sound + volume, aligned under the exercise sheet -->
-          <div class="control-group collapsible-panel group-sound" id="sound-panel">
-            <div class="collapsible-header" id="sound-toggle" role="button" tabindex="0">Sound</div>
-            <div class="collapsible-body">
-              <!-- Sound of the main beat (metronome / exercises, and the polyrhythm base ticks) -->
-              <div class="row seg" id="sound-seg"></div>
-              <div class="balance-label">Clicks vs beats</div>
-              <div class="row seg" id="balance-seg"></div>
-              <div class="balance-label">Volume</div>
-              <div class="row group-volume">
-                <span class="volume-icon">🔈</span>
-                <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
-                <span class="volume-icon">🔊</span>
-              </div>
-            </div>
-          </div>
         </section>
 
         <section class="controls">
@@ -178,6 +161,24 @@
           </div>
 
         </section>
+
+        <!-- Sound + volume: in the vertical layout it sits below every other
+             panel; on desktop a grid places it under the exercise sheet. -->
+        <div class="control-group collapsible-panel group-sound" id="sound-panel">
+          <div class="collapsible-header" id="sound-toggle" role="button" tabindex="0">Sound</div>
+          <div class="collapsible-body">
+            <!-- Sound of the main beat (metronome / exercises, and the polyrhythm base ticks) -->
+            <div class="row seg" id="sound-seg"></div>
+            <div class="balance-label">Clicks vs beats</div>
+            <div class="row seg" id="balance-seg"></div>
+            <div class="balance-label">Volume</div>
+            <div class="row group-volume">
+              <span class="volume-icon">🔈</span>
+              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
+              <span class="volume-icon">🔊</span>
+            </div>
+          </div>
+        </div>
       </main>
 
       <footer class="page-bottom">

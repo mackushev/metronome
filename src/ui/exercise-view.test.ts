@@ -57,6 +57,25 @@ describe('ExerciseView (jsdom integration)', () => {
     expect([...topics].map((o) => (o as HTMLOptionElement).value)).toEqual(['', 'Warm-ups']);
   });
 
+  it('the page picker is hidden until a topic is selected', async () => {
+    const store = await mount();
+    const pageField = document.getElementById('ex-page-field') as HTMLElement;
+    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
+    // No topic chosen on load -> no page control.
+    expect(pageField.hidden).toBe(true);
+    // Selecting a topic reveals the (topic-filtered) page picker.
+    topic.value = 'Warm-ups';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(store.get().exercise.topic).toBe('Warm-ups');
+    expect(pageField.hidden).toBe(false);
+    const pages = document.querySelectorAll('#ex-page option');
+    expect([...pages].map((o) => (o as HTMLOptionElement).value)).toEqual(['', '1']);
+    // Clearing the topic hides it again.
+    topic.value = '';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(pageField.hidden).toBe(true);
+  });
+
   it('the overlay arrows step prev/next within the filter (wrapping)', async () => {
     const store = await mount();
     (document.getElementById('ex-next') as HTMLButtonElement).click();
