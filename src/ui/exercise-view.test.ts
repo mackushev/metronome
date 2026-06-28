@@ -5,20 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Store, defaultSettings } from '../state';
 import { ExerciseView } from './exercise-view';
 
+const grid = { rows: 8, cols: 2, margin: { top: 120, right: 60, bottom: 60, left: 60 }, gapX: 40, gapY: 30 };
+const descriptor = { image: 'sample.svg', w: 1200, h: 1600, page: '1', topic: 'Warm-ups', grid };
+
 const manifest = ['0001.json'];
-const descriptor = {
-  image: 'sample.svg',
-  w: 1200,
-  h: 1600,
-  page: '1',
-  topic: 'Warm-ups',
-  grid: { rows: 8, cols: 2, margin: { top: 120, right: 60, bottom: 60, left: 60 }, gapX: 40, gapY: 30 },
-};
+const descriptors: Record<string, unknown> = { '0001.json': descriptor };
 
 function mockFetch() {
   return vi.fn(async (url: string) => {
-    const body = url.includes('manifest.json') ? manifest : descriptor;
-    return { ok: true, status: 200, json: async () => body } as Response;
+    if (url.includes('manifest.json')) return { ok: true, status: 200, json: async () => manifest } as Response;
+    const name = url.split('/').pop()!;
+    return { ok: true, status: 200, json: async () => descriptors[name] } as Response;
   });
 }
 
@@ -27,6 +24,18 @@ async function mount() {
   const view = new ExerciseView(store);
   await view.show();
   return store;
+}
+
+/** Mount with a second page added to the same topic, so the page picker is meaningful. */
+async function mountMultiPage() {
+  manifest.push('0002.json');
+  descriptors['0002.json'] = { ...descriptor, page: '2' };
+  try {
+    return await mount();
+  } finally {
+    manifest.pop();
+    delete descriptors['0002.json'];
+  }
 }
 
 describe('ExerciseView (jsdom integration)', () => {
@@ -57,19 +66,32 @@ describe('ExerciseView (jsdom integration)', () => {
     expect([...topics].map((o) => (o as HTMLOptionElement).value)).toEqual(['', 'Warm-ups']);
   });
 
-  it('the page picker is hidden until a topic is selected', async () => {
+  it('the page picker stays hidden for a single-page topic (nothing to choose)', async () => {
     const store = await mount();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
     expect(pageField.hidden).toBe(true);
-    // Selecting a topic reveals the (topic-filtered) page picker.
+    // The only topic spans a single page, so the picker has nothing to offer.
+    topic.value = 'Warm-ups';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(store.get().exercise.topic).toBe('Warm-ups');
+    expect(pageField.hidden).toBe(true);
+  });
+
+  it('the page picker is shown once a topic spans more than one page', async () => {
+    const store = await mountMultiPage();
+    const pageField = document.getElementById('ex-page-field') as HTMLElement;
+    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
+    // No topic chosen on load -> no page control.
+    expect(pageField.hidden).toBe(true);
+    // Selecting the multi-page topic reveals the (topic-filtered) page picker.
     topic.value = 'Warm-ups';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.get().exercise.topic).toBe('Warm-ups');
     expect(pageField.hidden).toBe(false);
     const pages = document.querySelectorAll('#ex-page option');
-    expect([...pages].map((o) => (o as HTMLOptionElement).value)).toEqual(['', '1']);
+    expect([...pages].map((o) => (o as HTMLOptionElement).value)).toEqual(['', '1', '2']);
     // Clearing the topic hides it again.
     topic.value = '';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
