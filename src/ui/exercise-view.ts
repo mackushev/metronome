@@ -473,7 +473,9 @@ export class ExerciseView {
     // The page picker is filtered by the selected topic and only shown once a
     // topic is chosen. Rebuild it only when the topic actually changed.
     if (this.pagesPopulatedFor !== s.topic) this.populatePages(s.topic);
-    this.pageField.hidden = !s.topic;
+    // Hide the page picker when there's nothing to choose: no topic selected,
+    // or the topic spans a single page.
+    this.pageField.hidden = !s.topic || this.pagesForTopic(s.topic).length <= 1;
     this.pageSel.value = s.page;
     this.randomChk.checked = s.random;
     const autoOn = s.autoSec > 0;
