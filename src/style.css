@@ -1193,6 +1193,53 @@ body {
   font-size: 14px;
 }
 
+/* --- Page filter chips (toggle plates) --- */
+
+.ex-page-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ex-page-field[hidden] {
+  display: none;
+}
+
+.ex-page-label {
+  color: var(--dim);
+}
+
+.ex-page-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Off by default; an off chip still counts as "all pages" when none are on. */
+.ex-page-chip {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--bg);
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.ex-page-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.ex-page-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
 .exercise-empty {
   color: var(--dim);
   font-size: 14px;

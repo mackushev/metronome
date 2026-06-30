@@ -70,12 +70,13 @@ export function expandGrid(image: ContentImage, grid: Grid): BBox[] {
 export type Rng = () => number;
 
 /**
- * The items matching the selected page and/or topic, in order. An empty filter
- * value means "any", so no page + no topic returns every item.
+ * The items matching the selected pages and/or topic, in order. An empty filter
+ * means "any": no pages selected + no topic returns every item. When one or
+ * more pages are selected, an item matches if it belongs to any of them.
  */
-export function filterItems(model: ContentModel, page: string, topic: string): Item[] {
+export function filterItems(model: ContentModel, pages: string[], topic: string): Item[] {
   return model.items.filter(
-    (it) => (!page || it.page === page) && (!topic || it.topic === topic),
+    (it) => (pages.length === 0 || pages.includes(it.page)) && (!topic || it.topic === topic),
   );
 }
 

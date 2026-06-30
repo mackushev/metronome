@@ -110,23 +110,29 @@ describe('composeModel', () => {
 describe('filterItems', () => {
   it('filters by page and/or topic; empty means any', () => {
     const m = model();
-    expect(filterItems(m, '1', '').map((i) => i.id)).toEqual(['s1-1', 's1-2', 's3-g']);
-    expect(filterItems(m, '', 'Beta')).toHaveLength(3);
-    expect(filterItems(m, '1', 'Gamma').map((i) => i.id)).toEqual(['s3-g']);
-    expect(filterItems(m, '', '')).toHaveLength(6);
+    expect(filterItems(m, ['1'], '').map((i) => i.id)).toEqual(['s1-1', 's1-2', 's3-g']);
+    expect(filterItems(m, [], 'Beta')).toHaveLength(3);
+    expect(filterItems(m, ['1'], 'Gamma').map((i) => i.id)).toEqual(['s3-g']);
+    expect(filterItems(m, [], '')).toHaveLength(6);
+  });
+
+  it('matches an item belonging to any of several selected pages', () => {
+    const m = model();
+    expect(filterItems(m, ['1', '2'], '')).toHaveLength(6);
+    expect(filterItems(m, ['2'], '').every((i) => i.page === '2')).toBe(true);
   });
 });
 
 describe('pickNext', () => {
   it('advances in order and wraps', () => {
-    const list = filterItems(model(), '1', '');
+    const list = filterItems(model(), ['1'], '');
     expect(pickNext(list, 's1-1', false)!.id).toBe('s1-2');
     expect(pickNext(list, 's3-g', false)!.id).toBe('s1-1'); // wraps
     expect(pickNext(list, null, false)!.id).toBe('s1-1'); // no current -> first
   });
 
   it('random stays in the list and avoids repeating the current item', () => {
-    const list = filterItems(model(), '1', '');
+    const list = filterItems(model(), ['1'], '');
     for (let i = 0; i < 10; i++) {
       const r = pickNext(list, 's1-1', true, () => 0.99)!;
       expect(list).toContain(r);
@@ -141,7 +147,7 @@ describe('pickNext', () => {
 
 describe('step', () => {
   it('moves forward and backward, wrapping at both ends', () => {
-    const list = filterItems(model(), '1', ''); // [s1-1, s1-2, s3-g]
+    const list = filterItems(model(), ['1'], ''); // [s1-1, s1-2, s3-g]
     expect(step(list, 's1-1', 1)!.id).toBe('s1-2');
     expect(step(list, 's3-g', 1)!.id).toBe('s1-1'); // wrap forward
     expect(step(list, 's1-1', -1)!.id).toBe('s3-g'); // wrap backward

@@ -58,44 +58,77 @@ describe('ExerciseView (jsdom integration)', () => {
     expect(store.get().exercise.currentId).toBe('0001-1');
   });
 
-  it('page and topic pickers are derived, each with an "All" option', async () => {
+  it('the topic picker is derived with an "All" option', async () => {
     await mount();
-    const pages = document.querySelectorAll('#ex-page option');
     const topics = document.querySelectorAll('#ex-topic option');
-    expect([...pages].map((o) => (o as HTMLOptionElement).value)).toEqual(['', '1']);
     expect([...topics].map((o) => (o as HTMLOptionElement).value)).toEqual(['', 'Warm-ups']);
   });
 
-  it('the page picker stays hidden for a single-page topic (nothing to choose)', async () => {
+  it('page chips are derived (one per page) — no combobox', async () => {
+    const store = await mountMultiPage();
+    expect(document.querySelector('#ex-page')).toBeNull(); // no <select>
+    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
+    topic.value = 'Warm-ups';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    const chips = document.querySelectorAll('#ex-page-chips .ex-page-chip');
+    expect([...chips].map((c) => (c as HTMLElement).dataset.page)).toEqual(['1', '2']);
+    // Nothing selected by default -> every chip is off (= all pages active).
+    expect([...chips].some((c) => c.classList.contains('active'))).toBe(false);
+    expect(store.get().exercise.pages).toEqual([]);
+  });
+
+  it('the page chips stay hidden for a single-page topic (nothing to choose)', async () => {
     const store = await mount();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
     expect(pageField.hidden).toBe(true);
-    // The only topic spans a single page, so the picker has nothing to offer.
+    // The only topic spans a single page, so the chips have nothing to offer.
     topic.value = 'Warm-ups';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.get().exercise.topic).toBe('Warm-ups');
     expect(pageField.hidden).toBe(true);
   });
 
-  it('the page picker is shown once a topic spans more than one page', async () => {
+  it('the page chips show once a topic spans more than one page', async () => {
     const store = await mountMultiPage();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
     expect(pageField.hidden).toBe(true);
-    // Selecting the multi-page topic reveals the (topic-filtered) page picker.
+    // Selecting the multi-page topic reveals the (topic-filtered) chips.
     topic.value = 'Warm-ups';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.get().exercise.topic).toBe('Warm-ups');
     expect(pageField.hidden).toBe(false);
-    const pages = document.querySelectorAll('#ex-page option');
-    expect([...pages].map((o) => (o as HTMLOptionElement).value)).toEqual(['', '1', '2']);
-    // Clearing the topic hides it again.
+    const chips = document.querySelectorAll('#ex-page-chips .ex-page-chip');
+    expect([...chips].map((c) => (c as HTMLElement).dataset.page)).toEqual(['1', '2']);
+    // Clearing the topic hides them again.
     topic.value = '';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
     expect(pageField.hidden).toBe(true);
+  });
+
+  it('toggling chips builds the page set; clearing all means "all pages"', async () => {
+    const store = await mountMultiPage();
+    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
+    topic.value = 'Warm-ups';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    const chip = (page: string) =>
+      document.querySelector(`#ex-page-chips .ex-page-chip[data-page="${page}"]`) as HTMLButtonElement;
+
+    chip('2').click();
+    expect(store.get().exercise.pages).toEqual(['2']);
+    expect(chip('2').classList.contains('active')).toBe(true);
+
+    chip('1').click();
+    expect(store.get().exercise.pages).toEqual(['2', '1']);
+
+    // Toggling both back off returns to the empty ("all pages") set.
+    chip('2').click();
+    chip('1').click();
+    expect(store.get().exercise.pages).toEqual([]);
+    expect(chip('1').classList.contains('active')).toBe(false);
   });
 
   it('the overlay arrows step prev/next within the filter (wrapping)', async () => {

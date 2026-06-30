@@ -55,8 +55,8 @@ export class ExerciseView {
   private readonly img = byId<HTMLImageElement>('ex-img');
   private readonly caption = byId<HTMLDivElement>('ex-caption');
   private readonly empty = byId<HTMLParagraphElement>('ex-empty');
-  private readonly pageSel = byId<HTMLSelectElement>('ex-page');
-  private readonly pageField = byId<HTMLLabelElement>('ex-page-field');
+  private readonly pageChips = byId<HTMLDivElement>('ex-page-chips');
+  private readonly pageField = byId<HTMLElement>('ex-page-field');
   private readonly topicSel = byId<HTMLSelectElement>('ex-topic');
 
   /** The topic the page picker is currently populated for (avoids rebuilding it every sync). */
@@ -81,11 +81,10 @@ export class ExerciseView {
     this.store = store;
     byId<HTMLButtonElement>('ex-prev').addEventListener('click', () => this.step(-1));
     byId<HTMLButtonElement>('ex-next').addEventListener('click', () => this.step(1));
-    this.pageSel.addEventListener('change', () => this.setFilter({ page: this.pageSel.value }));
-    // Choosing a topic resets the page filter — the page picker then lists only
-    // the pages that belong to that topic (and is hidden while no topic is set).
+    // Choosing a topic resets the page filter — the page chips then list only
+    // the pages that belong to that topic (and are hidden while no topic is set).
     this.topicSel.addEventListener('change', () =>
-      this.setFilter({ topic: this.topicSel.value, page: '' }),
+      this.setFilter({ topic: this.topicSel.value, pages: [] }),
     );
     this.randomChk.addEventListener('change', () => {
       // Re-pick the previewed item so it reflects the new sequential/random mode.
@@ -169,7 +168,7 @@ export class ExerciseView {
 
   /** Items matching the current page/topic filter, in order. */
   private filtered(state: ExerciseState = this.s()): Item[] {
-    return this.model ? filterItems(this.model, state.page, state.topic) : [];
+    return this.model ? filterItems(this.model, state.pages, state.topic) : [];
   }
 
   private currentItem(): Item | null {
@@ -189,7 +188,8 @@ export class ExerciseView {
     if (!this.model) return;
     const s = this.s();
     const patch: Partial<ExerciseState> = {};
-    if (s.page && !this.model.itemsByPage.has(s.page)) patch.page = '';
+    const pages = s.pages.filter((p) => this.model!.itemsByPage.has(p));
+    if (pages.length !== s.pages.length) patch.pages = pages;
     if (s.topic && !this.model.itemsByTopic.has(s.topic)) patch.topic = '';
     if (Object.keys(patch).length > 0) this.patch(patch);
   }
@@ -203,11 +203,21 @@ export class ExerciseView {
     }
   }
 
-  /** A filter change jumps to the first item of the new selection. */
-  private setFilter(p: { page?: string; topic?: string }): void {
+  /** Apply a filter change, keeping the current item if it still matches and
+      otherwise jumping to the first item of the new selection. */
+  private setFilter(p: { pages?: string[]; topic?: string }): void {
     const nextState = { ...this.s(), ...p };
-    const first = this.filtered(nextState)[0];
-    this.patch({ ...p, currentId: first?.id ?? nextState.currentId });
+    const list = this.filtered(nextState);
+    const keep = list.some((it) => it.id === nextState.currentId);
+    this.patch({ ...p, currentId: keep ? nextState.currentId : (list[0]?.id ?? null) });
+  }
+
+  /** Toggle one page chip on/off; empty selection means "all pages". */
+  private togglePage(id: string): void {
+    const pages = this.s().pages.includes(id)
+      ? this.s().pages.filter((p) => p !== id)
+      : [...this.s().pages, id];
+    this.setFilter({ pages });
   }
 
   /** Manual prev/next within the current filter (overlay arrows). */
@@ -455,10 +465,19 @@ export class ExerciseView {
     return this.model.pages.filter((p) => present.has(p.id));
   }
 
-  /** Rebuild the page picker for `topic` and remember what it was built for. */
+  /** Rebuild the page chips for `topic` and remember what they were built for. */
   private populatePages(topic: string): void {
     if (!this.model) return;
-    this.fillSelect(this.pageSel, 'All pages', this.pagesForTopic(topic));
+    this.pageChips.innerHTML = '';
+    for (const page of this.pagesForTopic(topic)) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ex-page-chip';
+      chip.dataset.page = page.id;
+      chip.textContent = page.title;
+      chip.addEventListener('click', () => this.togglePage(page.id));
+      this.pageChips.append(chip);
+    }
     this.pagesPopulatedFor = topic;
   }
 
@@ -470,13 +489,17 @@ export class ExerciseView {
   private syncControls(): void {
     const s = this.s();
     this.topicSel.value = s.topic;
-    // The page picker is filtered by the selected topic and only shown once a
-    // topic is chosen. Rebuild it only when the topic actually changed.
+    // The page chips are filtered by the selected topic and only shown once a
+    // topic is chosen. Rebuild them only when the topic actually changed.
     if (this.pagesPopulatedFor !== s.topic) this.populatePages(s.topic);
-    // Hide the page picker when there's nothing to choose: no topic selected,
+    // Hide the page chips when there's nothing to choose: no topic selected,
     // or the topic spans a single page.
     this.pageField.hidden = !s.topic || this.pagesForTopic(s.topic).length <= 1;
-    this.pageSel.value = s.page;
+    // Reflect the active set; empty selection leaves every chip off ("all pages").
+    for (const chip of this.pageChips.children) {
+      const el = chip as HTMLElement;
+      el.classList.toggle('active', s.pages.includes(el.dataset.page ?? ''));
+    }
     this.randomChk.checked = s.random;
     const autoOn = s.autoSec > 0;
     // Collapse/expand the auto-advance panel

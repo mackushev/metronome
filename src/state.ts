@@ -50,8 +50,8 @@ export interface ExerciseState {
   enabled: boolean;
   /** Currently shown item id; null until content loads / first selection. */
   currentId: string | null;
-  /** Page filter; '' = any page. */
-  page: string;
+  /** Selected page filter: a set of page ids; empty = every page is active. */
+  pages: string[];
   /** Topic filter; '' = any topic. */
   topic: string;
   /** Auto-advance picks a random item within the filter instead of the next one. */
@@ -185,7 +185,7 @@ export function defaultSettings(): Settings {
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
-    exercise: { enabled: false, currentId: null, page: '', topic: '', random: false, autoSec: 0 },
+    exercise: { enabled: false, currentId: null, pages: [], topic: '', random: false, autoSec: 0 },
     polyrhythm: { voices: defaultVoices() },
   };
 }
@@ -220,10 +220,16 @@ function parsePolyrhythm(raw: unknown, fallback: PolyrhythmSettings): Polyrhythm
 function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
   const e = raw as Record<string, unknown> | undefined;
   if (!e) return fallback;
+  // Migrate the legacy single-page filter (`page: string`) to the page set.
+  const pages = Array.isArray(e.pages)
+    ? e.pages.filter((p): p is string => typeof p === 'string')
+    : typeof e.page === 'string' && e.page
+      ? [e.page]
+      : fallback.pages;
   return {
     enabled: Boolean(e.enabled),
     currentId: typeof e.currentId === 'string' ? e.currentId : null,
-    page: typeof e.page === 'string' ? e.page : fallback.page,
+    pages,
     topic: typeof e.topic === 'string' ? e.topic : fallback.topic,
     random: typeof e.random === 'boolean' ? e.random : fallback.random,
     autoSec: typeof e.autoSec === 'number' && e.autoSec >= 0 ? e.autoSec : fallback.autoSec,
