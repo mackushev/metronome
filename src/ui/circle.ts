@@ -15,10 +15,15 @@ const TRAINER_RING_R = 152;
 const DIAL_R = 100;
 /** Tempo dial sensitivity: degrees of rotation per 1 BPM (full turn = 60 BPM) */
 const DEG_PER_BPM = 6;
-/** Jog-wheel tick scale: one tick every 12° (30 ticks), drawn in a thin band */
+/** Jog-wheel tick scale: one tick every 12° (30 ticks), short marks just
+    inside the rim */
 const DIAL_TICK_STEP_DEG = 12;
-const DIAL_TICK_INNER_R = 88;
+const DIAL_TICK_INNER_R = 93;
 const DIAL_TICK_OUTER_R = 98;
+/** The marker rides inside the rim (not on it) so it never slides under the
+    ±1 buttons, which sit just outside the rim */
+const DIAL_MARKER_R = 87;
+const DIAL_ARROW_R = DIAL_R + 7;
 /** Spring used while the marker settles onto an exact tick after release/tap */
 const DIAL_SETTLE_TRANSITION = 'transform .45s cubic-bezier(.22, 1.4, .36, 1)';
 /** Delta badge auto-hides this long after the last tempo change */
@@ -285,7 +290,7 @@ export class CircleView {
     }
     group.append(el('circle', { class: 'dial-rim', cx: CX, cy: CY, r: DIAL_R }));
     const markerRot = el('g', { class: 'dial-marker-rot' });
-    markerRot.append(el('circle', { class: 'dial-marker', cx: CX, cy: CY - DIAL_R, r: 7 }));
+    markerRot.append(el('circle', { class: 'dial-marker', cx: CX, cy: CY - DIAL_MARKER_R, r: 6 }));
     group.append(markerRot);
     return group;
   }
@@ -372,11 +377,11 @@ export class CircleView {
       [124, -1, '−'],
       [56, 1, '+'],
     ] as const) {
-      const { x, y } = polar(DIAL_R, deg);
-      const btn = el('circle', { class: 'dial-arrow-btn', cx: x, cy: y, r: 18 });
+      const { x, y } = polar(DIAL_ARROW_R, deg);
+      const btn = el('circle', { class: 'dial-arrow-btn', cx: x, cy: y, r: 15 });
       const label = el('text', { class: 'dial-arrow-label', x, y, dy: '0.35em' });
       label.textContent = glyph;
-      const hit = el('circle', { class: 'dial-arrow-hit', cx: x, cy: y, r: 22 });
+      const hit = el('circle', { class: 'dial-arrow-hit', cx: x, cy: y, r: 20 });
       hit.addEventListener('pointerdown', (event) => {
         event.preventDefault();
         this.dialStep(delta);

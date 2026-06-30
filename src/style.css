@@ -271,17 +271,17 @@ body {
 /* Faint ruler ticks that ground the wheel as an adjustable control */
 .dial-tick {
   stroke: var(--panel-border);
-  stroke-width: 1.5;
+  stroke-width: 1.2;
   stroke-linecap: round;
   pointer-events: none;
 }
 
-/* Green rim = tempo (matches the metronome's tempo color) */
+/* Green rim = tempo (matches the metronome's tempo color) — kept thin and airy */
 .dial-rim {
   fill: none;
   stroke: var(--trainer);
-  stroke-width: 4;
-  opacity: 0.55;
+  stroke-width: 2;
+  opacity: 0.5;
   pointer-events: none;
   transition: opacity 0.12s ease-out;
 }
@@ -331,7 +331,7 @@ body {
 
 .dial-arrow-label {
   fill: var(--text);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   text-anchor: middle;
   pointer-events: none;
