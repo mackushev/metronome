@@ -1,11 +1,4 @@
-import {
-  BEATS_MAX,
-  BPM_MAX,
-  BPM_MIN,
-  SUBDIVISIONS,
-  isSubMuted,
-  type Settings,
-} from '../state';
+import { BEATS_MAX, SUBDIVISIONS, isSubMuted, type Settings } from '../state';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VIEW = 360;
@@ -22,6 +15,14 @@ const TRAINER_RING_R = 152;
 const DIAL_R = 100;
 /** Tempo dial sensitivity: degrees of rotation per 1 BPM (full turn = 60 BPM) */
 const DEG_PER_BPM = 6;
+/** Jog-wheel tick scale: one tick every 12° (30 ticks), drawn in a thin band */
+const DIAL_TICK_STEP_DEG = 12;
+const DIAL_TICK_INNER_R = 88;
+const DIAL_TICK_OUTER_R = 98;
+/** Spring used while the marker settles onto an exact tick after release/tap */
+const DIAL_SETTLE_TRANSITION = 'transform .45s cubic-bezier(.22, 1.4, .36, 1)';
+/** Delta badge auto-hides this long after the last tempo change */
+const DIAL_BADGE_HIDE_MS = 1800;
 /** Outer selector dots: radius and tilt of the inter-sector gap axis
     (20° counterclockwise from vertical) */
 const SELECTOR_R = 168;
@@ -52,13 +53,6 @@ function el<K extends keyof SVGElementTagNameMap>(
 /** Tick angle in degrees: first beat at the top, clockwise */
 function tickAngle(index: number, total: number): number {
   return (index / total) * 360 - 90;
-}
-
-/** Tempo dial color: cool (blue) at slow tempo → warm (red) at fast tempo. */
-function bpmColor(bpm: number): string {
-  const t = Math.min(1, Math.max(0, (bpm - BPM_MIN) / (BPM_MAX - BPM_MIN)));
-  const hue = 210 - t * 210; // 210° blue → 0° red
-  return `hsl(${hue.toFixed(0)} 75% 60%)`;
 }
 
 /** Rotation step normalized to (-180, 180]: crossing the top causes no full-turn jump */
@@ -126,10 +120,28 @@ export class CircleView {
   private needle: SVGLineElement;
   private trainerRing: SVGCircleElement;
   private trainerRingLen: number;
-  private dialTrack: SVGCircleElement;
+  /** Jog wheel: a group with the tick scale + green rim, a rotating marker
+      group, the invisible grab zone, the ±1 buttons and the delta badge. */
+  private dialGroup: SVGGElement;
+  private dialMarkerRot: SVGGElement;
+  private dialBadge: SVGGElement;
+  private dialBadgeText: SVGTextElement;
   private dialHit: SVGCircleElement;
   private dialArrows: SVGElement[] = [];
   private dialDrag: { startValue: number; lastAngle: number; totalDeg: number } | null = null;
+  private dialDragging = false;
+  private dialPointerId: number | null = null;
+  /** Window-bound move/up handlers, attached only while a drag is in flight */
+  private readonly onDialMove = (event: PointerEvent): void => this.dialMove(event);
+  private readonly onDialUp = (): void => this.dialUp();
+  /** One-shot: the next marker update animates the settle spring */
+  private dialSettleOnce = false;
+  /** BPM the current gesture started from — the badge shows the delta from it */
+  private dialDeltaBase: number | null = null;
+  private dialBadgeVisible = false;
+  private dialBadgeTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly reducedMotion =
+    typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private selBeats: SelectorDot[] = [];
   private selSubdiv: SelectorDot[] = [];
   private selDecor: SVGElement[] = [];
@@ -172,13 +184,16 @@ export class CircleView {
     this.needle = el('line', { class: 'needle', x1: CX, y1: CY, x2: CX, y2: CY - NEEDLE_R });
     this.needle.style.visibility = 'hidden';
 
-    this.dialTrack = el('circle', { class: 'dial-track', cx: CX, cy: CY, r: DIAL_R });
+    this.dialGroup = this.buildDialWheel();
+    this.dialMarkerRot = this.dialGroup.querySelector('.dial-marker-rot') as SVGGElement;
     this.dialHit = el('circle', { class: 'dial-hit', cx: CX, cy: CY, r: DIAL_R });
+    // Only pointerdown lives on the wheel; move/up are bound to the window for
+    // the duration of the gesture so the drag always ends — even when the
+    // pointer is released over the center overlay (which sits above the SVG)
+    // or pointer capture is lost.
     this.dialHit.addEventListener('pointerdown', (event) => this.dialDown(event));
-    this.dialHit.addEventListener('pointermove', (event) => this.dialMove(event));
-    this.dialHit.addEventListener('pointerup', () => this.dialUp());
-    this.dialHit.addEventListener('pointercancel', () => this.dialUp());
     this.buildDialArrows();
+    [this.dialBadge, this.dialBadgeText] = this.buildDialBadge();
 
     this.selDecor = this.buildSelectorBands([
       ['band-beats', +1, 'beats'],
@@ -255,7 +270,36 @@ export class CircleView {
     });
   }
 
-  // --- Tempo dial ---
+  // --- Tempo dial (jog wheel) ---
+
+  /** The static wheel: a faint tick scale, the green rim, and the rotating
+      marker that signals "this turns". The marker only carries the rotation
+      transform; everything else is decorative and ignores pointer events. */
+  private buildDialWheel(): SVGGElement {
+    const group = el('g', { class: 'dial' });
+    for (let deg = 0; deg < 360; deg += DIAL_TICK_STEP_DEG) {
+      const a = deg - 90;
+      const p0 = polar(DIAL_TICK_INNER_R, a);
+      const p1 = polar(DIAL_TICK_OUTER_R, a);
+      group.append(el('line', { class: 'dial-tick', x1: p0.x, y1: p0.y, x2: p1.x, y2: p1.y }));
+    }
+    group.append(el('circle', { class: 'dial-rim', cx: CX, cy: CY, r: DIAL_R }));
+    const markerRot = el('g', { class: 'dial-marker-rot' });
+    markerRot.append(el('circle', { class: 'dial-marker', cx: CX, cy: CY - DIAL_R, r: 7 }));
+    group.append(markerRot);
+    return group;
+  }
+
+  /** Badge in the upper-right of the wheel showing the running delta (+5 / −3) */
+  private buildDialBadge(): [SVGGElement, SVGTextElement] {
+    const group = el('g', { class: 'dial-badge' });
+    group.style.display = 'none';
+    const { x, y } = polar(DIAL_R, -45);
+    group.append(el('rect', { class: 'dial-badge-bg', x: x - 20, y: y - 11, width: 40, height: 22, rx: 7 }));
+    const text = el('text', { class: 'dial-badge-text', x, y, dy: '0.02em' });
+    group.append(text);
+    return [group, text];
+  }
 
   /** Pointer angle relative to the circle center, degrees */
   private pointerAngle(event: PointerEvent): number {
@@ -267,54 +311,120 @@ export class CircleView {
 
   private dialDown(event: PointerEvent): void {
     event.preventDefault();
-    (event.target as Element).setPointerCapture(event.pointerId);
-    this.dialTrack.classList.add('grabbing');
-    this.dialDrag = {
-      startValue: this.callbacks.dial.start(),
-      lastAngle: this.pointerAngle(event),
-      totalDeg: 0,
-    };
-  }
-
-  private dialUp(): void {
-    this.dialDrag = null;
-    this.dialTrack.classList.remove('grabbing');
+    try {
+      this.dialHit.setPointerCapture(event.pointerId);
+    } catch {
+      /* capture is best-effort; the window listeners below are the safety net */
+    }
+    this.dialPointerId = event.pointerId;
+    const startValue = this.callbacks.dial.start();
+    this.dialDragging = true;
+    this.dialSettleOnce = false;
+    this.dialDeltaBase = startValue;
+    this.dialBadgeVisible = true;
+    if (this.dialBadgeTimer) clearTimeout(this.dialBadgeTimer);
+    this.dialDrag = { startValue, lastAngle: this.pointerAngle(event), totalDeg: 0 };
+    window.addEventListener('pointermove', this.onDialMove);
+    window.addEventListener('pointerup', this.onDialUp);
+    window.addEventListener('pointercancel', this.onDialUp);
+    this.updateDial(startValue);
   }
 
   private dialMove(event: PointerEvent): void {
     if (!this.dialDrag) return;
+    // Safety net: if the button was released without us getting pointerup
+    // (capture lost, focus change), end the drag instead of tracking a hover.
+    if (event.buttons === 0) {
+      this.dialUp();
+      return;
+    }
     const angle = this.pointerAngle(event);
     const delta = normalizeDeltaDeg(angle - this.dialDrag.lastAngle);
     this.dialDrag.lastAngle = angle;
     this.dialDrag.totalDeg += delta;
+    // change() rounds and re-renders, which calls updateDial() with the new BPM
     this.callbacks.dial.change(this.dialDrag.startValue + this.dialDrag.totalDeg / DEG_PER_BPM);
   }
 
-  /** ±1 BPM arrows on the horizontal radius of the dial: minus left, plus right */
+  private dialUp(): void {
+    window.removeEventListener('pointermove', this.onDialMove);
+    window.removeEventListener('pointerup', this.onDialUp);
+    window.removeEventListener('pointercancel', this.onDialUp);
+    if (this.dialPointerId !== null) {
+      try {
+        this.dialHit.releasePointerCapture(this.dialPointerId);
+      } catch {
+        /* capture may already be gone */
+      }
+      this.dialPointerId = null;
+    }
+    if (!this.dialDrag) return;
+    this.dialDrag = null;
+    this.dialDragging = false;
+    this.dialSettleOnce = true; // settle the marker onto the now-rounded BPM
+    this.updateDial(this.callbacks.dial.start());
+    this.flashDelta();
+  }
+
+  /** ±1 BPM arrows along the bottom of the wheel: minus left, plus right */
   private buildDialArrows(): void {
-    for (const [side, delta] of [
-      [-1, -1],
-      [1, 1],
+    for (const [deg, delta, glyph] of [
+      [124, -1, '−'],
+      [56, 1, '+'],
     ] as const) {
-      const x = CX + side * DIAL_R;
-      const y = CY;
-      const chevron = el('polyline', {
-        class: 'dial-arrow',
-        points: `${x - side * 4},${y - 8} ${x + side * 4},${y} ${x - side * 4},${y + 8}`,
-      });
-      const hit = el('circle', { class: 'dial-arrow-hit', cx: x, cy: y, r: 17 });
+      const { x, y } = polar(DIAL_R, deg);
+      const btn = el('circle', { class: 'dial-arrow-btn', cx: x, cy: y, r: 18 });
+      const label = el('text', { class: 'dial-arrow-label', x, y, dy: '0.35em' });
+      label.textContent = glyph;
+      const hit = el('circle', { class: 'dial-arrow-hit', cx: x, cy: y, r: 22 });
       hit.addEventListener('pointerdown', (event) => {
         event.preventDefault();
-        this.callbacks.dial.step(delta);
+        this.dialStep(delta);
       });
-      this.dialArrows.push(chevron, hit);
+      this.dialArrows.push(btn, label, hit);
     }
+  }
+
+  private dialStep(delta: number): void {
+    if (this.dialDeltaBase === null) this.dialDeltaBase = this.callbacks.dial.start();
+    this.dialBadgeVisible = true;
+    this.dialSettleOnce = true;
+    // step() re-renders synchronously → updateDial() runs the settle spring
+    this.callbacks.dial.step(delta);
+    this.flashDelta();
+  }
+
+  /** Reflect the BPM on the wheel: rotate the marker, drive the grab/settle
+      feedback, and refresh the delta badge. Called on every render. */
+  private updateDial(bpm: number): void {
+    const animate = this.dialSettleOnce && !this.dialDragging && !this.reducedMotion;
+    this.dialSettleOnce = false;
+    this.dialMarkerRot.style.transition = animate ? DIAL_SETTLE_TRANSITION : 'none';
+    this.dialMarkerRot.style.transform = `rotate(${(bpm * DEG_PER_BPM).toFixed(2)}deg)`;
+    this.dialGroup.classList.toggle('grabbing', this.dialDragging);
+    if (this.dialDeltaBase !== null && (this.dialDragging || this.dialBadgeVisible)) {
+      const d = Math.round(bpm) - this.dialDeltaBase;
+      this.dialBadgeText.textContent = (d > 0 ? '+' : '') + String(d);
+      this.dialBadge.style.display = '';
+    } else {
+      this.dialBadge.style.display = 'none';
+    }
+  }
+
+  private flashDelta(): void {
+    this.dialBadgeVisible = true;
+    if (this.dialBadgeTimer) clearTimeout(this.dialBadgeTimer);
+    this.dialBadgeTimer = setTimeout(() => {
+      this.dialBadgeVisible = false;
+      this.dialDeltaBase = null;
+      this.dialBadge.style.display = 'none';
+      this.dialBadgeTimer = null;
+    }, DIAL_BADGE_HIDE_MS);
   }
 
   /** Rebuilds the dots to match the current settings (call on every change) */
   render(settings: Settings): void {
     const { beats, subdivision, beatStates, mutedSubs } = settings;
-    this.dialTrack.style.setProperty('--dial-color', bpmColor(settings.bpm));
     if (this.polyMode) {
       // Leaving polyrhythm mode: force a full metronome rebuild
       this.polyMode = false;
@@ -335,6 +445,7 @@ export class CircleView {
     });
     this.renderSelector(this.selBeats, beats);
     this.renderSelector(this.selSubdiv, subdivision);
+    this.updateDial(settings.bpm);
   }
 
   private rebuild(beats: number, subdivision: number): void {
@@ -344,13 +455,16 @@ export class CircleView {
     this.svg.replaceChildren();
     this.dots = [];
 
+    // Visual wheel first, then the invisible grab zone, then the ±1 buttons on
+    // top (so their hit targets win over the drag zone), then the delta badge.
     this.svg.append(
       el('circle', { class: 'base-ring', cx: CX, cy: CY, r: DOT_RING_R }),
       this.trainerRing,
       this.needle,
-      this.dialTrack,
+      this.dialGroup,
       this.dialHit,
       ...this.dialArrows,
+      this.dialBadge,
     );
     this.svg.append(...this.selDecor);
     for (const { dot, num, hit } of [...this.selBeats, ...this.selSubdiv]) {

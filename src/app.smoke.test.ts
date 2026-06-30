@@ -72,10 +72,11 @@ describe('smoke: the app mounts', () => {
     expect(document.querySelectorAll('#circle .dot-beat')[1].classList.contains('accent')).toBe(true);
   });
 
-  it('the tempo dial is rendered: track, rotation zone and two arrows', () => {
-    expect(document.querySelector('#circle .dial-track')).not.toBeNull();
+  it('the tempo dial is rendered as a jog wheel: rim, marker, grab zone and two ±1 buttons', () => {
+    expect(document.querySelector('#circle .dial-rim')).not.toBeNull();
+    expect(document.querySelector('#circle .dial-marker')).not.toBeNull();
     expect(document.querySelector('#circle .dial-hit')).not.toBeNull();
-    expect(document.querySelectorAll('#circle .dial-arrow').length).toBe(2);
+    expect(document.querySelectorAll('#circle .dial-arrow-btn').length).toBe(2);
   });
 
   it('clicks-vs-beats balance: 3 positions, soft selected by default', () => {

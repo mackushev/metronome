@@ -255,22 +255,55 @@ body {
 }
 
 
-/* --- Tempo dial --- */
+/* --- Tempo dial (jog wheel) ---
+   A grabbable disc rather than a thin progress ring: a faint tick scale, a
+   green rim, and a rotating marker so it reads as "this turns" on its own. */
 
-/* Tinted ring hinting that it spins to change tempo.
-   --dial-color is set from JS and shifts with the BPM (cool → warm). */
-.dial-track {
-  fill: none;
-  stroke: var(--dial-color, var(--beat));
-  stroke-width: 7;
-  opacity: 0.5;
-  transition: stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease;
+/* The whole wheel brightens while grabbed — a tactile "I've got it" cue. */
+.dial {
+  transition: filter 0.12s ease-out;
 }
 
-/* Intensify while the user is spinning it */
-.dial-track.grabbing {
-  opacity: 1;
-  stroke-width: 9;
+.dial.grabbing {
+  filter: brightness(1.18);
+}
+
+/* Faint ruler ticks that ground the wheel as an adjustable control */
+.dial-tick {
+  stroke: var(--panel-border);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* Green rim = tempo (matches the metronome's tempo color) */
+.dial-rim {
+  fill: none;
+  stroke: var(--trainer);
+  stroke-width: 4;
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
+
+.dial.grabbing .dial-rim {
+  opacity: 0.95;
+}
+
+/* Marker rotates around the wheel center; the spring transition is applied
+   inline only during settle. transform-box keeps the origin at the SVG center. */
+.dial-marker-rot {
+  transform-box: view-box;
+  transform-origin: 180px 180px;
+}
+
+/* Dimmed pointer (not full-bright) — shows position without stealing the eye
+   from the BPM number */
+.dial-marker {
+  fill: #7fe0a6;
+  stroke: var(--bg);
+  stroke-width: 2;
+  pointer-events: none;
 }
 
 /* Invisible wide finger-sized grab zone */
@@ -282,19 +315,57 @@ body {
   touch-action: none;
 }
 
-/* ±1 BPM arrows on the sides of the dial */
-.dial-arrow {
-  fill: none;
-  stroke: var(--dim);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.dial-hit:active {
+  cursor: grabbing;
+}
+
+/* ±1 BPM buttons along the bottom of the wheel — contrast-boosted so they do
+   not vanish into the dark background (green outline + shadow) */
+.dial-arrow-btn {
+  fill: var(--panel);
+  stroke: var(--trainer);
+  stroke-width: 1.5;
   pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+}
+
+.dial-arrow-label {
+  fill: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
 }
 
 .dial-arrow-hit {
   fill: transparent;
   cursor: pointer;
+}
+
+/* Running delta badge (+5 / −3), auto-hidden from JS after the last change */
+.dial-badge-bg {
+  fill: color-mix(in srgb, var(--trainer) 18%, var(--panel));
+  stroke: var(--trainer);
+  stroke-width: 1;
+}
+
+.dial-badge-text {
+  fill: var(--trainer);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dial,
+  .dial-rim,
+  .dial-marker-rot {
+    transition: none !important;
+  }
 }
 
 .dot {

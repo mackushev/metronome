@@ -234,6 +234,41 @@ describe('CircleView', () => {
     });
   });
 
+  describe('tempo dial drag lifecycle', () => {
+    function startDrag(): { hit: Element; wheel: Element } {
+      circle.render(settings);
+      const hit = svg.querySelector('.dial-hit')!;
+      const wheel = svg.querySelector('.dial')!;
+      hit.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      return { hit, wheel };
+    }
+
+    it('marks the wheel grabbing on pointerdown', () => {
+      const { wheel } = startDrag();
+      expect(wheel.classList.contains('grabbing')).toBe(true);
+    });
+
+    it('ends the drag on a window pointerup (released anywhere, incl. over the center)', () => {
+      const { wheel } = startDrag();
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      expect(wheel.classList.contains('grabbing')).toBe(false);
+    });
+
+    it('does not keep tracking the pointer after release', () => {
+      startDrag();
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      (callbacks.dial.change as ReturnType<typeof vi.fn>).mockClear();
+      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, buttons: 1 }));
+      expect(callbacks.dial.change).not.toHaveBeenCalled();
+    });
+
+    it('treats a buttons-released move as the end of the drag (missed pointerup)', () => {
+      const { wheel } = startDrag();
+      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, buttons: 0 }));
+      expect(wheel.classList.contains('grabbing')).toBe(false);
+    });
+  });
+
   describe('setTrainerProgress', () => {
     it('shows the trainer ring with a progress fraction', () => {
       circle.render(settings);
