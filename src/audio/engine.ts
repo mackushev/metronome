@@ -74,6 +74,8 @@ export function tickKind(settings: Settings, pos: Position): TickKind | 'silent'
 interface ScheduledTick extends Position {
   time: number;
   intervalSec: number;
+  /** When set, this is a count-in beat and the number to display (N..1). */
+  countIn?: number;
 }
 
 /** A polyrhythm pulse already committed to the audio clock (for the UI read-out) */
@@ -102,6 +104,11 @@ export class MetronomeEngine {
   private nextTime = 0;
   private pos: Position = { beatIndex: 0, subIndex: 0 };
   private scheduled: ScheduledTick[] = [];
+
+  // Count-in: whole beats still to play before real measure 0 begins, and the
+  // total we started with (so we can derive the swept beat index for the UI).
+  private countInRemaining = 0;
+  private countInTotal = 0;
 
   // Polyrhythm scheduling state
   private polyEvents: PolyEvent[] = [];
@@ -162,6 +169,13 @@ export class MetronomeEngine {
     if (!ctx) return;
     this.pos = { beatIndex: 0, subIndex: 0 };
     this.scheduled = [];
+    // A one-bar count-in precedes real playback in the modes where it helps you
+    // get ready: exercises, and the metronome while the speed trainer is on.
+    // Plain metronome and polyrhythm start immediately.
+    const s0 = this.getSettings();
+    const wantsCountIn = s0.mode === 'exercises' || (s0.mode === 'metronome' && s0.trainer.enabled);
+    this.countInTotal = wantsCountIn ? s0.beats : 0;
+    this.countInRemaining = this.countInTotal;
     this.polyScheduled = [];
     this.polyCursor = 0;
     this.polyCycleStart = Number.NaN;
@@ -211,7 +225,7 @@ export class MetronomeEngine {
    * Current position for the UI: which tick is sounding and the fraction
    * of the way to the next one. Returns null when stopped or not yet started.
    */
-  position(): (Position & { fraction: number }) | null {
+  position(): (Position & { fraction: number; countIn?: number }) | null {
     if (!this.ctx || !this.running) return null;
     const now = this.ctx.currentTime;
     let current: ScheduledTick | null = null;
@@ -221,7 +235,12 @@ export class MetronomeEngine {
     }
     if (!current) return null;
     const fraction = Math.min(1, (now - current.time) / current.intervalSec);
-    return { beatIndex: current.beatIndex, subIndex: current.subIndex, fraction };
+    return {
+      beatIndex: current.beatIndex,
+      subIndex: current.subIndex,
+      fraction,
+      countIn: current.countIn,
+    };
   }
 
   /**
@@ -263,6 +282,27 @@ export class MetronomeEngine {
     const ctx = this.ctx!;
     while (this.nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
       const s = this.getSettings();
+
+      // Count-in phase: one accent click per beat, no subdivisions, and none of
+      // the measure-start callbacks (trainer / exercise auto-advance stay put
+      // until real playback begins).
+      if (this.countInRemaining > 0) {
+        const beatInterval = 60 / this.getSettings().bpm;
+        const idx = (this.countInTotal - this.countInRemaining) % s.beats;
+        this.master!.gain.value = s.volume;
+        scheduleSound(ctx, this.master!, s.sound, 'accent', this.nextTime, TICK_BEAT_LEVEL);
+        this.scheduled.push({
+          beatIndex: idx,
+          subIndex: 0,
+          time: this.nextTime,
+          intervalSec: beatInterval,
+          countIn: this.countInRemaining,
+        });
+        this.countInRemaining -= 1;
+        this.nextTime += beatInterval;
+        continue;
+      }
+
       // Settings may change on the fly — keep the position within the grid
       if (this.pos.beatIndex >= s.beats) this.pos = { beatIndex: 0, subIndex: 0 };
       if (this.pos.subIndex >= s.subdivision) this.pos = { ...this.pos, subIndex: 0 };

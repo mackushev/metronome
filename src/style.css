@@ -1298,3 +1298,172 @@ body {
     width: min(92vw, 920px);
   }
 }
+
+/* --- Header auxiliary buttons (count-in, stage) --- */
+
+.mode-switch {
+  flex-wrap: wrap;
+}
+
+.mode-switch-spacer {
+  flex: 1 1 0;
+}
+
+.mode-aux {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.mode-aux.active,
+.mode-aux:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mode-stage {
+  color: var(--text);
+}
+
+/* Count-in countdown reuses the big center number, tinted like the accent. */
+.center.counting .bpm-value {
+  color: var(--accent);
+}
+
+/* --- Stage view: full-screen black presentation overlay --- */
+
+.stage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: var(--active);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.stage-overlay.open {
+  display: flex;
+}
+
+/* The flash tints the backdrop briefly on each beat, stronger on the accent. */
+.stage-overlay.flash {
+  animation: stage-flash 140ms ease-out;
+}
+.stage-overlay.flash.flash-accent {
+  animation: stage-flash-accent 160ms ease-out;
+}
+
+@keyframes stage-flash {
+  0% {
+    background: #23262e;
+  }
+  100% {
+    background: #000;
+  }
+}
+@keyframes stage-flash-accent {
+  0% {
+    background: color-mix(in srgb, var(--accent) 40%, #000);
+  }
+  100% {
+    background: #000;
+  }
+}
+
+.stage-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: min(8vw, 90px);
+  width: 100%;
+  height: 100%;
+}
+
+.stage-number {
+  font-size: min(70vh, 46vw);
+  font-weight: 800;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  color: var(--active);
+}
+
+.stage-number.accent {
+  color: var(--accent);
+}
+
+.stage-number.counting {
+  color: var(--beat);
+}
+
+.stage-dots {
+  display: flex;
+  flex-direction: column;
+  gap: min(3vh, 26px);
+}
+
+.stage-dot {
+  width: min(6vh, 44px);
+  height: min(6vh, 44px);
+  border-radius: 50%;
+  background: #2a2e38;
+  transition: background 0.06s, transform 0.06s;
+}
+
+.stage-dot.accent {
+  background: color-mix(in srgb, var(--accent) 35%, #2a2e38);
+}
+
+.stage-dot.active {
+  background: var(--active);
+  transform: scale(1.25);
+}
+
+.stage-dot.accent.active {
+  background: var(--accent);
+}
+
+.stage-exit {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dim);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.stage-hint {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 1px;
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-overlay.flash,
+  .stage-overlay.flash.flash-accent {
+    animation: none;
+  }
+  .stage-dot {
+    transition: none;
+  }
+}

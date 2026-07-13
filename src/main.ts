@@ -22,6 +22,7 @@ import { BeatBar } from './ui/beatbar';
 import { CircleView } from './ui/circle';
 import { bindControls } from './ui/controls';
 import { ExerciseView } from './ui/exercise-view';
+import { StageView } from './ui/stage-view';
 
 // --- Determine the initial mode: URL wins, then localStorage, then default ---
 const savedSettings = loadSettings();
@@ -154,7 +155,12 @@ bindControls(store, {
 
 // --- Mode switch: the three pills reshape the page ---
 const exerciseView = new ExerciseView(store);
+// Tapping the stage backdrop toggles play/stop; exit is the ✕ button or Esc.
+const stageView = new StageView(store, () => togglePlay());
 const appEl = document.getElementById('app')!;
+
+// --- Stage view: a full-screen presentation overlay, orthogonal to the mode ---
+document.getElementById('stage-enter')!.addEventListener('click', () => stageView.show());
 const modeMetronome = document.getElementById('mode-metronome') as HTMLButtonElement;
 const modeExercises = document.getElementById('mode-exercises') as HTMLButtonElement;
 const modePolyrhythm = document.getElementById('mode-polyrhythm') as HTMLButtonElement;
@@ -259,15 +265,32 @@ else circle.render(store.get());
 beatBar.render(store.get());
 
 // --- Frame loop: needle, tick highlight, trainer progress ---
+// While a count-in plays, the big BPM number in the center shows the countdown.
+let countdownShown = false;
+function updateCenterCountdown(countIn: number | null | undefined): void {
+  if (countIn != null) {
+    bpmValue.textContent = String(countIn);
+    center.classList.add('counting');
+    countdownShown = true;
+  } else if (countdownShown) {
+    countdownShown = false;
+    center.classList.remove('counting');
+    bpmValue.textContent = String(store.get().bpm);
+  }
+}
+
 function frame(): void {
   if (store.get().mode === 'polyrhythm') {
     circle.polyTick(engine.polyPosition());
     circle.setTrainerProgress(null);
+    stageView.tick(engine.position());
     requestAnimationFrame(frame);
     return;
   }
   const pos = engine.position();
   circle.tick(pos);
+  stageView.tick(pos);
+  updateCenterCountdown(pos?.countIn);
   beatBar.setActive(pos ? pos.beatIndex : null);
 
   // A sticky "audio blocked" notice disappears as soon as audio actually plays
