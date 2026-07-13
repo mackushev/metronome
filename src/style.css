@@ -149,6 +149,21 @@ body {
   opacity: 0.8;
 }
 
+/* --- Beat sectors: lit wedges that anticipate the click (replace the needle) --- */
+.sector {
+  fill: var(--beat);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sector.accent {
+  fill: var(--accent);
+}
+
+.sector.mute {
+  fill: var(--dim);
+}
+
 /* --- Audio problem notice (mobile autoplay, iOS mute switch, no Web Audio) --- */
 
 /* display:flex would override the hidden attribute — keep it hidden explicitly */

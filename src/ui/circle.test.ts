@@ -147,19 +147,28 @@ describe('CircleView', () => {
       expect(activeDots.length).toBe(0);
     });
 
-    it('makes needle visible during playback', () => {
-      circle.render(settings);
-      circle.tick({ beatIndex: 0, subIndex: 0, fraction: 0 });
-      const needle = svg.querySelector('.needle') as SVGElement;
-      expect(needle?.style.visibility).toBe('visible');
+    it('builds one sector wedge per beat', () => {
+      circle.render(settings); // 4 beats
+      expect(svg.querySelectorAll('.sector').length).toBe(4);
     });
 
-    it('hides needle when stopped', () => {
+    it('lights the current beat sector fully and the next one partially', () => {
       circle.render(settings);
-      circle.tick({ beatIndex: 0, subIndex: 0, fraction: 0 });
+      circle.tick({ beatIndex: 0, subIndex: 0, fraction: 0.5 });
+      const sectors = svg.querySelectorAll('.sector') as NodeListOf<SVGElement>;
+      // Current beat is full; the upcoming beat leads ahead; the rest stay dark.
+      expect(Number(sectors[0].style.opacity)).toBeGreaterThan(0);
+      expect(Number(sectors[1].style.opacity)).toBeGreaterThan(0);
+      expect(Number(sectors[2].style.opacity)).toBe(0);
+      expect(Number(sectors[0].style.opacity)).toBeGreaterThan(Number(sectors[1].style.opacity));
+    });
+
+    it('clears all sectors when stopped', () => {
+      circle.render(settings);
+      circle.tick({ beatIndex: 1, subIndex: 0, fraction: 0.5 });
       circle.tick(null);
-      const needle = svg.querySelector('.needle') as SVGElement;
-      expect(needle?.style.visibility).toBe('hidden');
+      const sectors = svg.querySelectorAll('.sector') as NodeListOf<SVGElement>;
+      sectors.forEach((s) => expect(Number(s.style.opacity)).toBe(0));
     });
   });
 

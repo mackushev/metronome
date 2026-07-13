@@ -11,6 +11,19 @@ const DOT_RING_R = 138;
 const POLY_BASE_R = 150;
 const POLY_VOICE_RADII = [136, 118, 100, 84];
 const NEEDLE_R = 112;
+/** Beat sectors: pie wedges radiating from the centre out to the beat-dot ring.
+    They light up in place of the old sweeping needle. */
+const SECTOR_R_INNER = 0;
+const SECTOR_R_OUTER = 132;
+/** Gap (deg) trimmed off each side of a wedge so neighbours read as separate */
+const SECTOR_GAP_DEG = 3;
+/** Peak opacity of a lit sector (kept below 1 so the dots stay readable on top) */
+const SECTOR_MAX_OPACITY = 0.62;
+/** The downbeat (beat 1) is lit brighter so the "one" always stands out */
+const SECTOR_MAX_OPACITY_DOWNBEAT = 0.92;
+/** Lead-ahead sharpness: the upcoming sector stays dim, then snaps bright right
+    before its click (higher = later & less "predictive"). Keeps the pulse crisp. */
+const SECTOR_LEAD_EXP = 6;
 const TRAINER_RING_R = 152;
 const DIAL_R = 100;
 /** Tempo dial sensitivity: degrees of rotation per 1 BPM (full turn = 60 BPM) */
@@ -86,6 +99,28 @@ function arcPath(r: number, fromDeg: number, toDeg: number): string {
   return `M ${p0.x} ${p0.y} A ${r} ${r} 0 ${largeArc} ${sweep} ${p1.x} ${p1.y}`;
 }
 
+/** Wedge whose *leading* (left) edge sits on beat `index` of `beats` and which
+    spans forward to the next beat, from rInner to rOuter. When rInner is 0 it is
+    a full pie slice radiating from the centre. */
+function sectorPath(index: number, beats: number, rInner: number, rOuter: number): string {
+  const start = (index / beats) * 360 - 90;
+  const span = 360 / beats;
+  const a0 = start + SECTOR_GAP_DEG / 2;
+  const a1 = start + span - SECTOR_GAP_DEG / 2;
+  const large = a1 - a0 > 180 ? 1 : 0;
+  const o0 = polar(rOuter, a0);
+  const o1 = polar(rOuter, a1);
+  if (rInner <= 0) {
+    return `M ${CX} ${CY} L ${o0.x} ${o0.y} A ${rOuter} ${rOuter} 0 ${large} 1 ${o1.x} ${o1.y} Z`;
+  }
+  const i1 = polar(rInner, a1);
+  const i0 = polar(rInner, a0);
+  return (
+    `M ${o0.x} ${o0.y} A ${rOuter} ${rOuter} 0 ${large} 1 ${o1.x} ${o1.y} ` +
+    `L ${i1.x} ${i1.y} A ${rInner} ${rInner} 0 ${large} 0 ${i0.x} ${i0.y} Z`
+  );
+}
+
 export interface DialCallbacks {
   /** Current BPM at the moment the dial is grabbed */
   start: () => number;
@@ -122,6 +157,8 @@ interface SelectorDot {
  */
 export class CircleView {
   private dots: SVGCircleElement[] = [];
+  /** One filled wedge per beat, lit with lead-ahead to anticipate the click */
+  private sectors: SVGPathElement[] = [];
   private needle: SVGLineElement;
   private trainerRing: SVGCircleElement;
   private trainerRingLen: number;
@@ -448,6 +485,13 @@ export class CircleView {
         dot.setAttribute('class', `dot dot-sub${muted ? ' muted' : ''}${active}`);
       }
     });
+    // Colour each sector like its beat (accent / muted / normal); the opacity
+    // that lights them is driven per-frame in tick().
+    this.sectors.forEach((sector, j) => {
+      const state = beatStates[j] ?? 'normal';
+      const kind = state === 'accent' ? ' accent' : state === 'mute' ? ' mute' : '';
+      sector.setAttribute('class', `sector${kind}`);
+    });
     this.renderSelector(this.selBeats, beats);
     this.renderSelector(this.selSubdiv, subdivision);
     this.updateDial(settings.bpm);
@@ -460,12 +504,26 @@ export class CircleView {
     this.svg.replaceChildren();
     this.dots = [];
 
-    // Visual wheel first, then the invisible grab zone, then the ±1 buttons on
-    // top (so their hit targets win over the drag zone), then the delta badge.
+    // Beat sectors sit just under the dial and dots; they light up (with
+    // lead-ahead) instead of the old sweeping needle.
+    const sectorGroup = el('g', { class: 'sectors' });
+    this.sectors = [];
+    for (let i = 0; i < beats; i++) {
+      const path = el('path', {
+        class: 'sector',
+        d: sectorPath(i, beats, SECTOR_R_INNER, SECTOR_R_OUTER),
+      });
+      sectorGroup.append(path);
+      this.sectors.push(path);
+    }
+
+    // Base ring, then the sectors, then the visual wheel, then the invisible
+    // grab zone, then the ±1 buttons on top (so their hit targets win over the
+    // drag zone), then the delta badge.
     this.svg.append(
       el('circle', { class: 'base-ring', cx: CX, cy: CY, r: DOT_RING_R }),
       this.trainerRing,
-      this.needle,
+      sectorGroup,
       this.dialGroup,
       this.dialHit,
       ...this.dialArrows,
@@ -663,15 +721,42 @@ export class CircleView {
   tick(pos: { beatIndex: number; subIndex: number; fraction: number } | null): void {
     if (!pos) {
       this.setActive(-1);
-      this.needle.style.visibility = 'hidden';
+      this.clearSectors();
       return;
     }
-    const total = this.beats * this.subdivision;
     const index = pos.beatIndex * this.subdivision + pos.subIndex;
     this.setActive(index);
-    const angle = ((index + pos.fraction) / total) * 360;
-    this.needle.setAttribute('transform', `rotate(${angle} ${CX} ${CY})`);
-    this.needle.style.visibility = 'visible';
+    // Fraction of the way through the *current beat* (0..1), summing the ghost
+    // subdivisions so the sector sweep is smooth regardless of subdivision.
+    const beatFraction = (pos.subIndex + pos.fraction) / this.subdivision;
+    this.updateSectors(pos.beatIndex, beatFraction);
+  }
+
+  /** Light the beat sectors with lead-ahead: the current beat is lit full for
+      its whole span (crisp on/off, no trailing fade), and the *next* one snaps
+      brighter only as its click nears — so the eye can predict the click. */
+  private updateSectors(beat: number, beatFraction: number): void {
+    const beats = this.beats;
+    if (beats <= 0) return;
+    // The downbeat gets a stronger peak so beat 1 always reads as the anchor.
+    const peak = (j: number): number =>
+      j === 0 ? SECTOR_MAX_OPACITY_DOWNBEAT : SECTOR_MAX_OPACITY;
+    // Sharp lead: dim most of the beat, then a fast rise toward the click.
+    const lead = Math.pow(beatFraction, SECTOR_LEAD_EXP);
+    // A single-beat bar has no neighbours — pulse the lone sector toward the click.
+    if (beats === 1) {
+      this.sectors[0].style.opacity = String(lead * peak(0));
+      return;
+    }
+    const next = (beat + 1) % beats;
+    for (let j = 0; j < beats; j++) {
+      const level = j === beat ? 1 : j === next ? lead : 0;
+      this.sectors[j].style.opacity = String(level * peak(j));
+    }
+  }
+
+  private clearSectors(): void {
+    for (const sector of this.sectors) sector.style.opacity = '0';
   }
 
   /** Progress toward the next trainer speed-up, 0..1; null hides the ring */
