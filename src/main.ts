@@ -82,8 +82,14 @@ const center = document.getElementById('center')!;
 
 // --- Speed trainer: reference point (starting tempo and audio time) ---
 let trainerBase: { startBpm: number; startTime: number } | null = null;
+// While true, the trainer clock is armed on the first real beat (so a count-in
+// bar neither fills the progress ring nor eats into the first step).
+let trainerArmPending = false;
 
 function resetTrainerBase(): void {
+  // During a count-in the clock is still armed for the first real beat — don't
+  // start it early (that would run the progress ring through the prep bar).
+  if (trainerArmPending) return;
   const time = engine.currentTime();
   trainerBase =
     engine.running && store.get().trainer.enabled && time !== null
@@ -94,6 +100,13 @@ function resetTrainerBase(): void {
 // The trainer tempo is applied from the nearest beat — no waiting for the measure end
 engine.onBeatScheduled = (audioTime, beatIndex) => {
   const s = store.get();
+  // onBeatScheduled fires only for real beats (count-in ticks are skipped), so
+  // the first call after a start is the true downbeat — start the trainer clock
+  // here, not at play time, so the count-in bar does not advance the ring.
+  if (trainerArmPending) {
+    trainerArmPending = false;
+    trainerBase = s.trainer.enabled ? { startBpm: s.bpm, startTime: audioTime } : null;
+  }
   if (s.trainer.enabled && trainerBase) {
     const target = trainerTargetBpm(trainerBase.startBpm, audioTime - trainerBase.startTime, s.trainer);
     if (target !== s.bpm) store.update({ bpm: target });
@@ -214,7 +227,10 @@ requestAnimationFrame(() => requestAnimationFrame(() => appEl.classList.remove('
 // --- Start/stop ---
 function togglePlay(): void {
   engine.toggle();
-  resetTrainerBase();
+  // Defer the trainer clock to the first real beat (after any count-in); on stop
+  // clear it. Mid-play tempo/param changes still rebase immediately via resetTrainerBase.
+  trainerBase = null;
+  trainerArmPending = engine.running;
   playIcon.textContent = engine.running ? '❚❚' : '▶';
   playBtn.classList.toggle('playing', engine.running);
   if (engine.running) maybeShowIosHint();
