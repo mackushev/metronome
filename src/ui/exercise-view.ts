@@ -13,6 +13,25 @@ function resolveSrc(path: string): string {
   return base.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
 }
 
+/** What the stage overlay needs to mirror the current exercise. */
+export interface ExerciseStageInfo {
+  /** Id of the shown item, or null when none — drives re-render on change. */
+  itemId: string | null;
+  /** Short caption, e.g. "Title · 3/12". */
+  caption: string;
+  /** Seconds until the next auto-advance, or null when auto-advance is off. */
+  remainingSec: number | null;
+  /** True while the countdown expired and we wait for the next measure. */
+  pending: boolean;
+}
+
+/** The subset of ExerciseView the stage overlay consumes. */
+export interface StageExerciseSource {
+  /** Crop the current item into a caller-owned viewport/img; false if not ready. */
+  renderInto(viewport: HTMLElement, img: HTMLImageElement): boolean;
+  stageInfo(): ExerciseStageInfo;
+}
+
 /**
  * Exercise viewer: shows one item (a crop of an image). Navigation is just two
  * filters — page and topic — plus an optional auto-advance (sequential, or
@@ -564,5 +583,46 @@ export class ExerciseView {
     const pos = list.findIndex((it) => it.id === item.id) + 1;
     const label = `${item.page ? `p.${item.page}` : ''}${item.topic ? ` · ${item.topic}` : ''}`.trim();
     this.caption.textContent = `${item.title ? `${item.title} · ` : ''}${pos}/${list.length}${label ? ` · ${label}` : ''}`;
+  }
+
+  /* --- Stage overlay bridge (StageExerciseSource) --- */
+
+  /** Crop the current item into a caller-owned viewport/img (reuses crop()). */
+  renderInto(viewport: HTMLElement, img: HTMLImageElement): boolean {
+    const item = this.currentItem();
+    if (!this.model || !item) return false;
+    const image = this.model.imagesById.get(item.image);
+    if (!image) return false;
+    // Set the src first so the image starts loading even before the viewport has
+    // been laid out (avoids a flash of the broken-image icon).
+    const newSrc = resolveSrc(image.src);
+    if (img.getAttribute('src') !== newSrc) img.src = newSrc;
+    const width = viewport.clientWidth || 0;
+    if (width <= 0) return false; // retry sizing once the layout has a width
+    const t = crop(item.bbox, image, width);
+    viewport.style.height = `${t.viewportHeight}px`;
+    img.style.width = `${t.imgWidth}px`;
+    img.style.height = `${t.imgHeight}px`;
+    img.style.transform = `translate(${t.offsetX}px, ${t.offsetY}px)`;
+    return true;
+  }
+
+  /** Seconds until the next auto-advance, or null when auto-advance is off. */
+  private autoRemaining(): number | null {
+    if (!this.autoActive || this.s().autoSec <= 0) return null;
+    const elapsed = (performance.now() - this.autoStartedAt) / 1000;
+    return Math.max(0, this.s().autoSec - elapsed);
+  }
+
+  stageInfo(): ExerciseStageInfo {
+    const item = this.currentItem();
+    const list = this.filtered();
+    const pos = item ? list.findIndex((it) => it.id === item.id) + 1 : 0;
+    return {
+      itemId: item?.id ?? null,
+      caption: item ? `${item.title ? `${item.title} · ` : ''}${pos}/${list.length}` : '',
+      remainingSec: this.autoRemaining(),
+      pending: this.pendingAdvance,
+    };
   }
 }

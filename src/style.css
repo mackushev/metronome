@@ -1362,6 +1362,7 @@ body {
 
 .stage-overlay.open {
   display: flex;
+  flex-direction: column;
 }
 
 /* The flash tints the backdrop briefly on each beat, stronger on the accent. */
@@ -1395,7 +1396,65 @@ body {
   justify-content: center;
   gap: min(8vw, 90px);
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- Bottom info strip: speed-trainer status + exercise panel --- */
+
+.stage-info {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: min(2vh, 16px);
+  width: 100%;
+  margin-bottom: 34px;
+}
+
+.stage-trainer {
+  color: var(--accent);
+  font-size: min(3.4vh, 26px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+.stage-ex {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 92vw;
+}
+
+.stage-ex-viewport {
+  position: relative;
+  overflow: hidden;
+  width: min(46vw, 460px);
+  background: #fff;
+  border-radius: 8px;
+}
+
+.stage-ex-viewport img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  /* width/height/transform are set inline by the crop transform */
+  max-width: none;
+}
+
+.stage-ex-meta {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  color: var(--dim);
+  font-size: min(2.4vh, 16px);
+}
+
+.stage-ex-countdown {
+  color: var(--beat);
+  font-variant-numeric: tabular-nums;
 }
 
 .stage-number {

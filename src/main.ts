@@ -156,7 +156,8 @@ bindControls(store, {
 // --- Mode switch: the three pills reshape the page ---
 const exerciseView = new ExerciseView(store);
 // Tapping the stage backdrop toggles play/stop; exit is the ✕ button or Esc.
-const stageView = new StageView(store, () => togglePlay());
+// The stage overlay mirrors the current exercise via the exercise view.
+const stageView = new StageView(store, () => togglePlay(), exerciseView);
 const appEl = document.getElementById('app')!;
 
 // --- Stage view: a full-screen presentation overlay, orthogonal to the mode ---
@@ -289,7 +290,6 @@ function frame(): void {
   }
   const pos = engine.position();
   circle.tick(pos);
-  stageView.tick(pos);
   updateCenterCountdown(pos?.countIn);
   beatBar.setActive(pos ? pos.beatIndex : null);
 
@@ -298,6 +298,8 @@ function frame(): void {
     audioNotice.hidden = true;
   }
 
+  // Short trainer status for the stage overlay, built alongside the full one.
+  let stageTrainerText: string | null = null;
   const s = store.get();
   const time = engine.currentTime();
   if (engine.running && s.trainer.enabled && trainerBase && time !== null) {
@@ -305,17 +307,20 @@ function frame(): void {
     if (trainerAtMax(s.bpm, trainerBase.startBpm, s.trainer)) {
       circle.setTrainerProgress(1);
       trainerStatus.textContent = `Limit reached: ${s.bpm} BPM`;
+      stageTrainerText = `Max ${s.bpm} BPM`;
     } else {
       circle.setTrainerProgress(trainerProgress(elapsed, trainerBase.startBpm, s.trainer));
       const toNext = Math.ceil(secondsToNextStep(elapsed, trainerBase.startBpm, s.trainer));
       const stepBpm = currentStageStepBpm(elapsed, trainerBase.startBpm, s.trainer);
       trainerStatus.textContent = `+${stepBpm} BPM in ${toNext} s (started at ${trainerBase.startBpm})`;
+      stageTrainerText = `${s.bpm} BPM · +${stepBpm} in ${toNext}s`;
     }
   } else {
     circle.setTrainerProgress(null);
     trainerStatus.textContent =
       s.trainer.enabled && !engine.running ? 'Start the metronome — the tempo will rise on its own' : '';
   }
+  stageView.tick(pos, { trainerText: stageTrainerText });
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
