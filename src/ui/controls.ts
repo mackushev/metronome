@@ -8,11 +8,13 @@ import {
   clampBpm,
   type ClickVolume,
   type PolyVoice,
+  type Settings,
   type SoundName,
   type Store,
   type TrainerSettings,
   type TrainerStage,
 } from '../state';
+import { voiceTooFast } from '../audio/engine';
 
 /** Balance positions: beat dot + click dot of growing size */
 const CLICK_VOLUMES: { value: ClickVolume; title: string }[] = [
@@ -269,10 +271,24 @@ function buildSoundButtons(
   }
 }
 
-/** Highlight the selected sound button within a container */
-function syncSoundButtons(container: HTMLElement, selected: SoundName): void {
+/**
+ * Reflect the beat-sound segment (Click / Beep / Voice). "voice" is a pseudo
+ * value: selecting it flips `voiceCount` on; Click/Beep flip it off. The Voice
+ * button also warns (`.warn`) when the tempo would smear the count into a drone.
+ */
+function syncSoundSeg(container: HTMLElement, s: Settings): void {
   for (const btn of container.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
-    btn.classList.toggle('selected', (btn.dataset.value as SoundName) === selected);
+    const value = btn.dataset.value!;
+    if (value === 'voice') {
+      const warn = s.voiceCount && voiceTooFast(s.bpm, s.subdivision);
+      btn.classList.toggle('selected', s.voiceCount);
+      btn.classList.toggle('warn', warn);
+      btn.title = warn
+        ? 'Too fast — the spoken count blurs into a drone at this tempo/subdivision'
+        : 'Count out loud (one e and a…) — subdivisions 1–4';
+    } else {
+      btn.classList.toggle('selected', !s.voiceCount && value === s.sound);
+    }
   }
 }
 
@@ -372,16 +388,25 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   const volumeSlider = byId<HTMLInputElement>('volume-slider');
 
   // --- Sound (main beat; also the polyrhythm base ticks) ---
-  // Only the two click-style timbres here; drum sounds live in the voice selects.
+  // Two click-style timbres plus a spoken-count option; drum sounds live in the
+  // voice selects. Picking Click/Beep turns voice counting off; picking Voice
+  // turns it on (the click timbre stays as the fallback for subdivisions 5–8).
   const beatSounds = SOUNDS.filter((s) => s.name === 'click' || s.name === 'beep');
   buildSoundButtons(
     soundSeg,
     (name) => {
-      store.update({ sound: name });
+      store.update({ sound: name, voiceCount: false });
       callbacks.onSoundPreview();
     },
     beatSounds,
   );
+  const voiceBtn = document.createElement('button');
+  voiceBtn.className = 'btn seg-btn';
+  voiceBtn.textContent = 'Voice';
+  voiceBtn.dataset.value = 'voice';
+  voiceBtn.title = 'Count out loud (one e and a…) — subdivisions 1–4';
+  voiceBtn.addEventListener('click', () => store.update({ voiceCount: true }));
+  soundSeg.append(voiceBtn);
 
   // --- Polyrhythm voices ---
   bindPolyVoices(store, callbacks);
@@ -418,7 +443,7 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // --- Reflect state back into static controls ---
   store.subscribe((s) => {
-    syncSoundButtons(soundSeg, s.sound);
+    syncSoundSeg(soundSeg, s);
     for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
       btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
     }
@@ -427,7 +452,7 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // Initial render
   const s = store.get();
-  syncSoundButtons(soundSeg, s.sound);
+  syncSoundSeg(soundSeg, s);
   for (const btn of balanceSeg.querySelectorAll<HTMLButtonElement>('.seg-btn')) {
     btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
   }

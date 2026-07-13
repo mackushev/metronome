@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { advance, polyEventsForCycle, tickKind } from './audio/engine';
+import {
+  advance,
+  countSyllable,
+  polyEventsForCycle,
+  tickKind,
+  voiceTooFast,
+} from './audio/engine';
 import {
   cycleBeatState,
   defaultBeatStates,
@@ -11,6 +17,54 @@ import {
 } from './state';
 import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
 import { normalizeDeltaDeg } from './ui/circle';
+
+describe('countSyllable: spoken counting', () => {
+  it('speaks the beat number on every downbeat', () => {
+    expect(countSyllable(1, 0, 0)).toBe('one');
+    expect(countSyllable(4, 3, 0)).toBe('four');
+    expect(countSyllable(2, 7, 0)).toBe('eight');
+  });
+
+  it('eighths add "and"', () => {
+    expect(countSyllable(2, 0, 1)).toBe('and');
+  });
+
+  it('triplets say "trip"/"let"', () => {
+    expect(countSyllable(3, 0, 1)).toBe('trip');
+    expect(countSyllable(3, 0, 2)).toBe('let');
+  });
+
+  it('sixteenths say "e"/"and"/"a"', () => {
+    expect(countSyllable(4, 0, 1)).toBe('e');
+    expect(countSyllable(4, 0, 2)).toBe('and');
+    expect(countSyllable(4, 0, 3)).toBe('a');
+  });
+
+  it('has no syllable for subdivisions without a standard vocalization', () => {
+    expect(countSyllable(5, 0, 1)).toBeNull();
+    expect(countSyllable(6, 0, 3)).toBeNull();
+    expect(countSyllable(8, 0, 5)).toBeNull();
+  });
+});
+
+describe('voiceTooFast: mush warning', () => {
+  it('is calm at moderate tempos', () => {
+    expect(voiceTooFast(120, 1)).toBe(false); // quarters at 120
+    expect(voiceTooFast(90, 2)).toBe(false); // eighths at 90
+  });
+
+  it('warns once syllables crowd together', () => {
+    expect(voiceTooFast(200, 4)).toBe(true); // sixteenths at 200 — a blur
+    expect(voiceTooFast(180, 2)).toBe(true); // eighths at 180
+    expect(voiceTooFast(300, 1)).toBe(true); // quarters at max tempo
+  });
+
+  it('past subdivision 4 only the beat is spoken, so it stays clearer', () => {
+    // 8 subdivisions at 120: if every tick spoke it would blur, but only the
+    // beat (0.5 s apart) is voiced, so no warning.
+    expect(voiceTooFast(120, 8)).toBe(false);
+  });
+});
 
 describe('advance: tick grid', () => {
   it('walks subdivisions within a beat', () => {

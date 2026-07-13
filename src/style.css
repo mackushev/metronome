@@ -5,6 +5,7 @@
   --text: #f4f6fa;
   --dim: #a4abbd;
   --accent: #ffb02e;
+  --warn: #ff6b5c;
   --beat: #5db1ff;
   --active: #ffffff;
   --trainer: #3fd67f;
@@ -550,6 +551,14 @@ body {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 18%, var(--bg));
   color: var(--accent);
+}
+
+/* Voice selected but the tempo is too fast — the count will smear into a drone. */
+.seg-btn.warn,
+.seg-btn.warn.selected {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 20%, var(--bg));
+  color: var(--warn);
 }
 
 /* --- Collapsible panels (Speed trainer, Auto-advance) --- */

@@ -48,8 +48,9 @@ describe('smoke: the app mounts', () => {
   });
 
   it('sound controls are built', () => {
-    // The main-beat sound row offers only the two click timbres
-    expect(document.querySelectorAll('#sound-seg .seg-btn').length).toBe(2);
+    // The main-beat sound row offers the two click timbres plus the Voice count
+    expect(document.querySelectorAll('#sound-seg .seg-btn').length).toBe(3);
+    expect(document.querySelector('#sound-seg .seg-btn[data-value="voice"]')).not.toBeNull();
   });
 
   it('outer selectors: 8 dots per arc plus sector backdrops', () => {

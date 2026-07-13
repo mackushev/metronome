@@ -61,6 +61,43 @@ export function advance(pos: Position, beats: number, subdivision: number): Posi
   return { beatIndex, subIndex };
 }
 
+/** Spoken beat numbers, index 0..7 → "one".."eight" (beats never exceed 8). */
+export const NUMBER_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+
+/** Every syllable that may need a voice sample (used to preload the pack). */
+export const VOICE_WORDS = [...NUMBER_WORDS, 'e', 'and', 'a', 'trip', 'let'];
+
+/**
+ * The spoken syllable for a grid position, or null when there is no standard
+ * vocalization (subdivisions 5..8 past the beat) so the caller falls back to a
+ * click. On the beat it is the number word; between beats it depends on the
+ * subdivision: 2 → "and", 3 (triplet) → "trip"/"let", 4 → "e"/"and"/"a".
+ */
+export function countSyllable(subdivision: number, beatIndex: number, subIndex: number): string | null {
+  if (subIndex === 0) return NUMBER_WORDS[beatIndex] ?? null;
+  if (subdivision === 2) return subIndex === 1 ? 'and' : null;
+  if (subdivision === 3) return subIndex === 1 ? 'trip' : subIndex === 2 ? 'let' : null;
+  if (subdivision === 4) return ['e', 'and', 'a'][subIndex - 1] ?? null;
+  return null;
+}
+
+/**
+ * Shortest onset-to-onset gap (seconds) at which spoken syllables still read as
+ * distinct. Below it the voice pack blurs into a drone. Tuned to the pack's
+ * short syllables (bodies ~0.2–0.3 s; the samples carry extra trailing silence).
+ */
+export const VOICE_MIN_GAP_SEC = 0.22;
+
+/** Gap between spoken syllables: subs 1–4 speak every tick, 5–8 only the beat. */
+export function voiceOnsetGap(bpm: number, subdivision: number): number {
+  return subdivision <= 4 ? 60 / bpm / subdivision : 60 / bpm;
+}
+
+/** True when the tempo/subdivision spaces the voice too tightly to stay clear. */
+export function voiceTooFast(bpm: number, subdivision: number): boolean {
+  return voiceOnsetGap(bpm, subdivision) < VOICE_MIN_GAP_SEC;
+}
+
 export function tickKind(settings: Settings, pos: Position): TickKind | 'silent' {
   if (pos.subIndex !== 0) {
     return isSubMuted(settings.mutedSubs, pos.beatIndex, pos.subIndex) ? 'silent' : 'sub';
@@ -109,6 +146,12 @@ export class MetronomeEngine {
   // total we started with (so we can derive the swept beat index for the UI).
   private countInRemaining = 0;
   private countInTotal = 0;
+
+  // Voice-count sample pack: decoded syllable buffers, loaded lazily the first
+  // time voice counting is used. Until ready, the scheduler falls back to clicks.
+  private voiceBuffers = new Map<string, AudioBuffer>();
+  private voiceLoading = false;
+  private voiceLoaded = false;
 
   // Polyrhythm scheduling state
   private polyEvents: PolyEvent[] = [];
@@ -221,6 +264,42 @@ export class MetronomeEngine {
     scheduleSound(ctx, this.master!, sound ?? s.sound, kind, ctx.currentTime + 0.02, CLICK_VOLUME_FACTOR[s.clickVolume]);
   }
 
+  /** Load and decode the voice-count pack once; safe to call every schedule. */
+  private ensureVoiceLoaded(): void {
+    if (this.voiceLoaded || this.voiceLoading || !this.ctx) return;
+    this.voiceLoading = true;
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+    void Promise.all(
+      VOICE_WORDS.map(async (word) => {
+        const res = await fetch(`${base}/voice/en/${word}.wav`);
+        const buf = await this.ctx!.decodeAudioData(await res.arrayBuffer());
+        this.voiceBuffers.set(word, buf);
+      }),
+    )
+      .then(() => {
+        this.voiceLoaded = true;
+      })
+      .catch(() => {
+        // Missing/undecodable pack — keep clicking, never retry-storm.
+        this.voiceBuffers.clear();
+        this.voiceLoaded = false;
+      })
+      .finally(() => {
+        this.voiceLoading = false;
+      });
+  }
+
+  /** Fire a decoded voice syllable on the precise clock, like a scheduled click. */
+  private playVoice(buffer: AudioBuffer, time: number, gain: number): void {
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    src.connect(g).connect(this.master!);
+    src.start(time);
+  }
+
   /**
    * Current position for the UI: which tick is sounding and the fraction
    * of the way to the next one. Returns null when stopped or not yet started.
@@ -314,10 +393,20 @@ export class MetronomeEngine {
       const interval = 60 / this.getSettings().bpm / s.subdivision;
       const kind = tickKind(this.getSettings(), this.pos);
       this.master!.gain.value = s.volume;
+      if (s.voiceCount) this.ensureVoiceLoaded();
       if (kind !== 'silent') {
-        const subLevel =
-          this.pos.subIndex === 0 ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
-        scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime, subLevel);
+        // Speak the count where a syllable exists and the pack is ready;
+        // otherwise (or on subdivisions 5..8) fall back to the click.
+        const word = s.voiceCount ? countSyllable(s.subdivision, this.pos.beatIndex, this.pos.subIndex) : null;
+        const voice = word ? this.voiceBuffers.get(word) : undefined;
+        if (voice) {
+          const gain = kind === 'accent' ? 1 : this.pos.subIndex === 0 ? 0.9 : 0.72;
+          this.playVoice(voice, this.nextTime, gain);
+        } else {
+          const subLevel =
+            this.pos.subIndex === 0 ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
+          scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime, subLevel);
+        }
       }
 
       this.scheduled.push({ ...this.pos, time: this.nextTime, intervalSec: interval });

@@ -69,6 +69,9 @@ export interface Settings {
   /** Clicks per beat */
   subdivision: number;
   sound: SoundName;
+  /** Speak the count out loud ("one and two and…") instead of the click, where
+      a standard vocalization exists for the current subdivision. */
+  voiceCount: boolean;
   /** Volume 0..1 */
   volume: number;
   /** Subdivision clicks vs beats loudness ratio */
@@ -180,6 +183,7 @@ export function defaultSettings(): Settings {
     beats: 4,
     subdivision: 1,
     sound: 'click',
+    voiceCount: false,
     volume: 0.8,
     clickVolume: 'soft',
     mutedSubs: [],
@@ -292,6 +296,7 @@ export function loadSettings(): Settings {
         ? Number(parsed.subdivision)
         : fallback.subdivision,
       sound: SOUNDS.some((s) => s.name === parsed.sound) ? (parsed.sound as SoundName) : fallback.sound,
+      voiceCount: typeof parsed.voiceCount === 'boolean' ? parsed.voiceCount : fallback.voiceCount,
       volume:
         typeof parsed.volume === 'number' ? Math.min(1, Math.max(0, parsed.volume)) : fallback.volume,
       clickVolume:
