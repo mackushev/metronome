@@ -233,6 +233,7 @@ function togglePlay(): void {
   trainerArmPending = engine.running;
   playIcon.textContent = engine.running ? '❚❚' : '▶';
   playBtn.classList.toggle('playing', engine.running);
+  document.getElementById('stage-enter')!.classList.toggle('playing', engine.running);
   if (engine.running) maybeShowIosHint();
   exerciseView.setPlaying(engine.running);
 }

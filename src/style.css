@@ -1323,36 +1323,59 @@ body {
   }
 }
 
-/* --- Header auxiliary buttons (count-in, stage) --- */
+/* --- Stage floating action button --- */
 
-.mode-switch {
-  flex-wrap: wrap;
-}
-
-.mode-switch-spacer {
-  flex: 1 1 0;
-}
-
-.mode-aux {
-  min-height: 42px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel);
-  color: var(--dim);
-  font-size: 14px;
+.stage-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0A93B;
+  color: #0a0a0c;
+  box-shadow: 0 8px 22px rgba(240, 169, 59, 0.4);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  z-index: 900;
+  transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease,
+              background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease,
+              border-color 0.2s ease, backdrop-filter 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mode-aux.active,
-.mode-aux:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+.stage-fab svg {
+  width: 22px;
+  height: 22px;
+  transition: width 0.2s ease, height 0.2s ease;
 }
 
-.mode-stage {
-  color: var(--text);
+.stage-fab.playing {
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  background: rgba(19, 20, 24, 0.6);
+  color: #8A8D96;
+  border: 1px solid #2a2c33;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: none;
+}
+
+.stage-fab.playing svg {
+  width: 20px;
+  height: 20px;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .stage-fab {
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom));
+  }
 }
 
 /* Count-in countdown reuses the big center number, tinted like the accent. */
