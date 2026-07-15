@@ -46,8 +46,6 @@ export interface TrainerSettings {
 }
 
 export interface ExerciseState {
-  /** Exercise practice mode on; when on, the beat bar gives way to the sheet. */
-  enabled: boolean;
   /** Currently shown item id; null until content loads / first selection. */
   currentId: string | null;
   /** Selected page filter: a set of page ids; empty = every page is active. */
@@ -189,7 +187,7 @@ export function defaultSettings(): Settings {
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
-    exercise: { enabled: false, currentId: null, pages: [], topic: '', random: false, autoSec: 0 },
+    exercise: { currentId: null, pages: [], topic: '', random: false, autoSec: 0 },
     polyrhythm: { voices: defaultVoices() },
   };
 }
@@ -231,7 +229,6 @@ function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
       ? [e.page]
       : fallback.pages;
   return {
-    enabled: Boolean(e.enabled),
     currentId: typeof e.currentId === 'string' ? e.currentId : null,
     pages,
     topic: typeof e.topic === 'string' ? e.topic : fallback.topic,
@@ -282,9 +279,12 @@ export function loadSettings(): Settings {
     // Derive the mode: prefer an explicit field, else fall back to the legacy
     // exercise.enabled flag from before polyrhythm existed.
     const validModes: AppMode[] = ['metronome', 'exercises', 'polyrhythm'];
+    const legacyExerciseOn = Boolean(
+      (parsed.exercise as { enabled?: unknown } | undefined)?.enabled,
+    );
     const mode: AppMode = validModes.includes(parsed.mode as AppMode)
       ? (parsed.mode as AppMode)
-      : exercise.enabled
+      : legacyExerciseOn
         ? 'exercises'
         : 'metronome';
 

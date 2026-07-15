@@ -660,15 +660,6 @@ body {
   accent-color: var(--trainer);
 }
 
-.trainer-body {
-  /* margin-top handled by collapsible-body */
-}
-
-.trainer-body.disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-
 .trainer-stage + .trainer-stage {
   margin-top: 10px;
   padding-top: 10px;

@@ -122,7 +122,15 @@ export class ExerciseView {
       // The preview lives in the controls column with its own width.
       new ResizeObserver(() => this.refreshPreview()).observe(this.previewViewport);
     }
-    this.store.subscribe(() => {
+    // Skip updates that don't touch this view (e.g. per-beat BPM ticks from the
+    // speed trainer, beat-state edits). `exercise` and `mode` are the only slices
+    // it consumes, and Store.update() gives them fresh identities on any patch.
+    let prevExercise = this.store.get().exercise;
+    let prevMode = this.store.get().mode;
+    this.store.subscribe((s) => {
+      if (s.exercise === prevExercise && s.mode === prevMode) return;
+      prevExercise = s.exercise;
+      prevMode = s.mode;
       this.syncControls();
       this.render();
     });

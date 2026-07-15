@@ -688,7 +688,7 @@ export class CircleView {
   polyTick(readout: { phase: number; base: number; voices: number[] } | null): void {
     if (!readout) {
       this.setActive(-1);
-      this.setPolyActiveVoices(this.polyActiveVoices.map(() => -1));
+      this.clearPolyActive();
       this.needle.style.visibility = 'hidden';
       return;
     }
@@ -697,6 +697,19 @@ export class CircleView {
     const angle = readout.phase * 360;
     this.needle.setAttribute('transform', `rotate(${angle} ${CX} ${CY})`);
     this.needle.style.visibility = 'visible';
+  }
+
+  /** Clear every voice's active highlight (used while the engine is stopped). */
+  private clearPolyActive(): void {
+    for (let v = 0; v < this.polyActiveVoices.length; v++) {
+      const cur = this.polyActiveVoices[v];
+      if (cur < 0) continue;
+      const timer = this.polyVoiceTimers[v];
+      if (timer !== null) clearTimeout(timer);
+      this.polyVoiceTimers[v] = null;
+      this.polyVoiceDots[v]?.[cur]?.classList.remove('active');
+      this.polyActiveVoices[v] = -1;
+    }
   }
 
   /** Light each voice's most recent pulse, with an independent fade-out per voice. */

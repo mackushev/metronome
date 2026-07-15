@@ -30,7 +30,6 @@ const urlMode = modeFromUrl();
 if (urlMode != null) {
   // The URL explicitly requests a mode — override whatever localStorage had.
   savedSettings.mode = urlMode;
-  savedSettings.exercise = { ...savedSettings.exercise, enabled: urlMode === 'exercises' };
 }
 
 const store = new Store(savedSettings);
@@ -201,10 +200,7 @@ function syncMode(): void {
  * history entry (that would break the back button).
  */
 function setMode(mode: AppMode, fromPopState = false): void {
-  if (store.get().mode !== mode) {
-    // Keep the legacy exercise.enabled flag in sync for backward compatibility.
-    store.update({ mode, exercise: { ...store.get().exercise, enabled: mode === 'exercises' } });
-  }
+  if (store.get().mode !== mode) store.update({ mode });
   if (!fromPopState) pushMode(mode);
   syncMode();
 }
@@ -263,22 +259,23 @@ center.addEventListener('pointerup', endDrag);
 center.addEventListener('pointercancel', endDrag);
 
 // --- React to settings changes ---
-let prevTrainer = JSON.stringify(store.get().trainer);
+// Store.update() always spreads to a new settings object; nested slices keep
+// their identity unless a patch replaces them. Ref-compare `trainer` to avoid
+// stringifying on every unrelated update (e.g. per-beat BPM ticks).
+let prevTrainer = store.get().trainer;
 store.subscribe((s) => {
   bpmValue.textContent = String(s.bpm);
   if (s.mode === 'polyrhythm') circle.renderPoly(s);
   else circle.render(s);
   beatBar.render(s);
-  // Restart the trainer countdown only when its own parameters change
-  const trainerNow = JSON.stringify(s.trainer);
-  if (trainerNow !== prevTrainer) {
-    prevTrainer = trainerNow;
+  if (s.trainer !== prevTrainer) {
+    prevTrainer = s.trainer;
     resetTrainerBase();
   }
 });
+// syncMode() above already rendered the circle for the initial mode; only the
+// bits it does not touch need an initial paint.
 bpmValue.textContent = String(store.get().bpm);
-if (store.get().mode === 'polyrhythm') circle.renderPoly(store.get());
-else circle.render(store.get());
 beatBar.render(store.get());
 
 // --- Frame loop: needle, tick highlight, trainer progress ---
