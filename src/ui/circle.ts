@@ -23,7 +23,10 @@ const SECTOR_MAX_OPACITY = 0.62;
 const SECTOR_MAX_OPACITY_DOWNBEAT = 0.92;
 /** Lead-ahead sharpness: the upcoming sector stays dim, then snaps bright right
     before its click (higher = later & less "predictive"). Keeps the pulse crisp. */
-const SECTOR_LEAD_EXP = 6;
+const SECTOR_LEAD_EXP = 14;
+/** On the beat itself the current sector briefly overshoots peak opacity, then
+    decays back to peak within ~1/SECTOR_FLASH_DECAY of the beat span. */
+const SECTOR_FLASH_DECAY = 6;
 const TRAINER_RING_R = 152;
 const DIAL_R = 100;
 /** Tempo dial sensitivity: degrees of rotation per 1 BPM (full turn = 60 BPM) */
@@ -743,15 +746,19 @@ export class CircleView {
       j === 0 ? SECTOR_MAX_OPACITY_DOWNBEAT : SECTOR_MAX_OPACITY;
     // Sharp lead: dim most of the beat, then a fast rise toward the click.
     const lead = Math.pow(beatFraction, SECTOR_LEAD_EXP);
-    // A single-beat bar has no neighbours — pulse the lone sector toward the click.
+    // Very short overshoot right at the click, decaying back to steady peak.
+    const flash = Math.max(0, 1 - beatFraction * SECTOR_FLASH_DECAY);
+    const currentLevel = (b: number): number =>
+      Math.min(1, peak(b) + flash * (1 - peak(b)));
+    // A single-beat bar has no neighbours — combine the lead-in with the flash.
     if (beats === 1) {
-      this.sectors[0].style.opacity = String(lead * peak(0));
+      this.sectors[0].style.opacity = String(Math.max(lead * peak(0), currentLevel(0)));
       return;
     }
     const next = (beat + 1) % beats;
     for (let j = 0; j < beats; j++) {
-      const level = j === beat ? 1 : j === next ? lead : 0;
-      this.sectors[j].style.opacity = String(level * peak(j));
+      const opacity = j === beat ? currentLevel(j) : j === next ? lead * peak(j) : 0;
+      this.sectors[j].style.opacity = String(opacity);
     }
   }
 
