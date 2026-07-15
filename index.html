@@ -14,12 +14,6 @@
         <button class="mode-pill" id="mode-exercises" type="button">Exercises</button>
         <button class="mode-pill" id="mode-polyrhythm" type="button">Polyrhythm</button>
       </nav>
-      <button class="stage-fab" id="stage-enter" type="button" aria-label="Full-screen stage view" title="Full-screen stage view">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"
-                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
       <main class="layout">
         <section class="circle-col">
           <div class="circle-wrap">
@@ -31,68 +25,39 @@
               <span class="icon-play">▶</span>
             </button>
           </div>
+          <button class="stage-fab" id="stage-enter" type="button" aria-label="Full-screen stage view" title="Full-screen stage view">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
           </div>
           <div class="beat-bar" id="beat-bar" aria-label="Beats of the measure"></div>
           <div class="audio-notice" id="audio-notice" hidden>
             <span id="audio-notice-text"></span>
             <button class="audio-notice-close" id="audio-notice-close" aria-label="Dismiss">✕</button>
           </div>
-
-          <!-- Exercise view: on narrow screens sits right below the circle -->
-          <section class="exercise" id="exercise-view" hidden>
-            <div class="exercise-caption" id="ex-caption"></div>
-            <div class="exercise-viewport" id="ex-viewport">
-              <img id="ex-img" alt="Current exercise" />
-              <button class="ex-nav ex-nav-prev" id="ex-prev" type="button" aria-label="Previous exercise">‹</button>
-              <button class="ex-nav ex-nav-next" id="ex-next" type="button" aria-label="Next exercise">›</button>
-              <div class="ex-progress-bar" id="ex-progress-bar" hidden>
-                <div class="ex-progress-fill" id="ex-progress-fill"></div>
-              </div>
-            </div>
-            <div class="exercise-controls">
-              <label>Topic
-                <select id="ex-topic"></select>
-              </label>
-              <div id="ex-page-field" class="ex-page-field" hidden>
-                <span class="ex-page-label">Pages</span>
-                <div id="ex-page-chips" class="ex-page-chips"></div>
-              </div>
-            </div>
-            <p class="exercise-empty" id="ex-empty" hidden>
-              No exercises yet. Add images and descriptors under
-              <code>public/content/</code> — see <code>HOWTO.md</code>.
-            </p>
-          </section>
         </section>
 
-        <section class="controls">
-          <!-- Collapsible auto-advance panel (exercises mode only) -->
-          <div class="control-group collapsible-panel" id="ex-auto-panel">
-            <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
-            <div class="collapsible-body" id="ex-auto-body">
-              <div class="trainer-row" id="ex-auto-row">
-                <span class="trainer-lbl">every</span>
-                <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-dec">−15s</button>
-                <span class="trainer-num" id="ex-delta-num">20</span>
-                <span class="trainer-unit">s</span>
-                <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-inc">+15s</button>
-              </div>
-              <!-- Next exercise preview (shown immediately while auto-advance is on) -->
-              <div class="ex-preview" id="ex-preview" hidden>
-                <div class="ex-preview-head">
-                  <div class="ex-preview-label" id="ex-preview-label">Next</div>
-                  <label class="toggle ex-random-toggle">
-                    <input type="checkbox" id="ex-random" />
-                    <span>Random</span>
-                  </label>
-                </div>
-                <div class="ex-preview-viewport" id="ex-preview-viewport">
-                  <img id="ex-preview-img" alt="Next exercise" />
-                </div>
-              </div>
+        <div class="right-col">
+        <!-- Sound + volume. Collapsed by default; state is not persisted so
+             each session starts with the panel closed. -->
+        <div class="control-group collapsible-panel group-sound collapsed" id="sound-panel">
+          <div class="collapsible-header" id="sound-toggle" role="button" tabindex="0">Sound</div>
+          <div class="collapsible-body">
+            <!-- Sound of the main beat (metronome / exercises, and the polyrhythm base ticks) -->
+            <div class="row seg" id="sound-seg"></div>
+            <div class="balance-label">Clicks vs beats</div>
+            <div class="row seg" id="balance-seg"></div>
+            <div class="balance-label">Volume</div>
+            <div class="row group-volume">
+              <span class="volume-icon">🔈</span>
+              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
+              <span class="volume-icon">🔊</span>
             </div>
           </div>
-
+        </div>
+        <section class="controls">
           <!-- Collapsible Speed trainer panel -->
           <div class="control-group collapsible-panel" id="trainer-panel">
             <div class="collapsible-header" id="trainer-toggle" role="button" tabindex="0">Speed trainer</div>
@@ -161,6 +126,33 @@
             </div>
           </div>
 
+          <!-- Collapsible auto-advance panel (exercises mode only) -->
+          <div class="control-group collapsible-panel" id="ex-auto-panel">
+            <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
+            <div class="collapsible-body" id="ex-auto-body">
+              <div class="trainer-row" id="ex-auto-row">
+                <span class="trainer-lbl">every</span>
+                <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-dec">−15s</button>
+                <span class="trainer-num" id="ex-delta-num">20</span>
+                <span class="trainer-unit">s</span>
+                <button class="btn trainer-btn trainer-drag-btn" id="ex-delta-inc">+15s</button>
+              </div>
+              <!-- Next exercise preview (shown immediately while auto-advance is on) -->
+              <div class="ex-preview" id="ex-preview" hidden>
+                <div class="ex-preview-head">
+                  <div class="ex-preview-label" id="ex-preview-label">Next</div>
+                  <label class="toggle ex-random-toggle">
+                    <input type="checkbox" id="ex-random" />
+                    <span>Random</span>
+                  </label>
+                </div>
+                <div class="ex-preview-viewport" id="ex-preview-viewport">
+                  <img id="ex-preview-img" alt="Next exercise" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Polyrhythm voices (shown only in polyrhythm mode) -->
           <div class="control-group group-poly" id="poly-panel">
             <div class="group-label">Voices</div>
@@ -168,24 +160,34 @@
           </div>
 
         </section>
+        </div>
 
-        <!-- Sound + volume: in the vertical layout it sits below every other
-             panel; on desktop a grid places it under the exercise sheet. -->
-        <div class="control-group collapsible-panel group-sound" id="sound-panel">
-          <div class="collapsible-header" id="sound-toggle" role="button" tabindex="0">Sound</div>
-          <div class="collapsible-body">
-            <!-- Sound of the main beat (metronome / exercises, and the polyrhythm base ticks) -->
-            <div class="row seg" id="sound-seg"></div>
-            <div class="balance-label">Clicks vs beats</div>
-            <div class="row seg" id="balance-seg"></div>
-            <div class="balance-label">Volume</div>
-            <div class="row group-volume">
-              <span class="volume-icon">🔈</span>
-              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
-              <span class="volume-icon">🔊</span>
+        <!-- Exercise view: on narrow screens sits below the controls; on wide
+             screens spans both grid columns beneath the top row. -->
+        <section class="exercise" id="exercise-view" hidden>
+          <div class="exercise-caption" id="ex-caption"></div>
+          <div class="exercise-viewport" id="ex-viewport">
+            <img id="ex-img" alt="Current exercise" />
+            <button class="ex-nav ex-nav-prev" id="ex-prev" type="button" aria-label="Previous exercise">‹</button>
+            <button class="ex-nav ex-nav-next" id="ex-next" type="button" aria-label="Next exercise">›</button>
+            <div class="ex-progress-bar" id="ex-progress-bar" hidden>
+              <div class="ex-progress-fill" id="ex-progress-fill"></div>
             </div>
           </div>
-        </div>
+          <div class="exercise-controls">
+            <label>Topic
+              <select id="ex-topic"></select>
+            </label>
+            <div id="ex-page-field" class="ex-page-field" hidden>
+              <span class="ex-page-label">Pages</span>
+              <div id="ex-page-chips" class="ex-page-chips"></div>
+            </div>
+          </div>
+          <p class="exercise-empty" id="ex-empty" hidden>
+            No exercises yet. Add images and descriptors under
+            <code>public/content/</code> — see <code>HOWTO.md</code>.
+          </p>
+        </section>
       </main>
 
       <footer class="page-bottom">

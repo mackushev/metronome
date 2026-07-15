@@ -323,7 +323,7 @@ function frame(): void {
     const elapsed = time - trainerBase.startTime;
     if (trainerAtMax(s.bpm, trainerBase.startBpm, s.trainer)) {
       circle.setTrainerProgress(1);
-      trainerStatus.textContent = `Limit reached: ${s.bpm} BPM`;
+      trainerStatus.textContent = '';
       stageTrainerText = `Max ${s.bpm} BPM`;
     } else {
       circle.setTrainerProgress(trainerProgress(elapsed, trainerBase.startBpm, s.trainer));
@@ -334,8 +334,7 @@ function frame(): void {
     }
   } else {
     circle.setTrainerProgress(null);
-    trainerStatus.textContent =
-      s.trainer.enabled && !engine.running ? 'Start the metronome — the tempo will rise on its own' : '';
+    trainerStatus.textContent = '';
   }
   stageView.tick(pos, { trainerText: stageTrainerText });
   requestAnimationFrame(frame);
