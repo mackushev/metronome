@@ -61,7 +61,9 @@ export function trainerTargetBpm(
   return clampBpm(Math.min(stageBpm + steps * stage.stepBpm, Math.max(stageBpm, cap)));
 }
 
-/** Whether the ceiling is reached across all stages */
+/** Whether the ceiling is reached across all stages. If the ceiling is at or
+    below the starting BPM there is nowhere to grow — treat it as "no cap" and
+    keep the ring cycling instead of flagging a bogus max on the first beat. */
 export function trainerAtMax(
   currentBpm: number,
   startBpm: number,
@@ -70,7 +72,8 @@ export function trainerAtMax(
   if (stages.length === 0) return true;
   const lastStage = stages[stages.length - 1];
   const overallCap = lastStage.maxBpm ?? BPM_MAX;
-  return currentBpm >= Math.max(startBpm, overallCap);
+  if (overallCap <= startBpm) return false;
+  return currentBpm >= overallCap;
 }
 
 /** Fraction of time until the next speed-up in the current stage, 0..1 */

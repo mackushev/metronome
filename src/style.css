@@ -744,7 +744,7 @@ body {
 
 .trainer-add-stage-btn {
   width: 100%;
-  margin: 2px 0 -4px;
+  margin: 2px 0 0;
   min-height: 32px;
   font-size: 13px;
   color: var(--trainer);
@@ -817,13 +817,6 @@ body {
 
 .volume-icon {
   font-size: 14px;
-}
-
-.trainer-status {
-  width: 100%;
-  color: var(--trainer);
-  font-size: 14px;
-  min-height: 18px;
 }
 
 .hint {

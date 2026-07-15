@@ -222,7 +222,7 @@ export class CircleView {
       cx: CX,
       cy: CY,
       r: TRAINER_RING_R,
-      'stroke-dasharray': this.trainerRingLen,
+      'stroke-dasharray': `${this.trainerRingLen} ${this.trainerRingLen}`,
       'stroke-dashoffset': this.trainerRingLen,
       transform: `rotate(-90 ${CX} ${CY})`,
     });

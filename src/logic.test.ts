@@ -183,7 +183,9 @@ describe('speed trainer', () => {
 
   it('maxBpm below the starting tempo does not lower the tempo', () => {
     expect(trainerTargetBpm(150, 50, p)).toBe(150);
-    expect(trainerAtMax(150, 150, p)).toBe(true);
+    // A ceiling at or below the starting tempo is unreachable and treated
+    // as no cap, so the trainer keeps cycling rather than flagging max.
+    expect(trainerAtMax(150, 150, p)).toBe(false);
   });
 
   it('progress and time until the next step', () => {

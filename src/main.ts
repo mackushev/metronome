@@ -77,7 +77,6 @@ const audioNotice = document.getElementById('audio-notice')!;
 const audioNoticeText = document.getElementById('audio-notice-text')!;
 const playBtn = document.getElementById('play') as HTMLButtonElement;
 const playIcon = playBtn.querySelector('.icon-play')!;
-const trainerStatus = document.getElementById('trainer-status')!;
 const center = document.getElementById('center')!;
 
 // --- Speed trainer: reference point (starting tempo and audio time) ---
@@ -323,18 +322,15 @@ function frame(): void {
     const elapsed = time - trainerBase.startTime;
     if (trainerAtMax(s.bpm, trainerBase.startBpm, s.trainer)) {
       circle.setTrainerProgress(1);
-      trainerStatus.textContent = '';
       stageTrainerText = `Max ${s.bpm} BPM`;
     } else {
       circle.setTrainerProgress(trainerProgress(elapsed, trainerBase.startBpm, s.trainer));
       const toNext = Math.ceil(secondsToNextStep(elapsed, trainerBase.startBpm, s.trainer));
       const stepBpm = currentStageStepBpm(elapsed, trainerBase.startBpm, s.trainer);
-      trainerStatus.textContent = `+${stepBpm} BPM in ${toNext} s (started at ${trainerBase.startBpm})`;
       stageTrainerText = `${s.bpm} BPM · +${stepBpm} in ${toNext}s`;
     }
   } else {
     circle.setTrainerProgress(null);
-    trainerStatus.textContent = '';
   }
   stageView.tick(pos, { trainerText: stageTrainerText });
   requestAnimationFrame(frame);
