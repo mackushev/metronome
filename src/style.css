@@ -528,6 +528,16 @@ body {
   flex-wrap: wrap;
 }
 
+/* Single-column layout: push the sound panel to the very bottom of the stack
+   (below the controls and exercise), so nothing but the footer hint text sits
+   under it. On desktop it lives inside the real .right-col flex column and this
+   order has no effect. */
+@media (max-width: 1099.98px) {
+  #sound-panel {
+    order: 1;
+  }
+}
+
 .control-group {
   background: var(--panel);
   border: 1px solid var(--panel-border);
