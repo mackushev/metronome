@@ -1,6 +1,7 @@
 import {
   BPM_MIN,
   BPM_MAX,
+  DEFAULT_STAGE,
   POLY_PULSES_MIN,
   POLY_PULSES_MAX,
   SOUNDS,
@@ -33,7 +34,12 @@ export interface ControlsCallbacks {
   onVoicePreview: (sound: SoundName) => void;
 }
 
-/** Bind a button that changes a numeric value; also supports up/down drag with lower sensitivity. */
+/**
+ * Bind a button that changes a numeric value by clickDelta; also supports up/down
+ * drag. Both the tap and the drag stay on the step grid aligned to `base`
+ * (…, base − |clickDelta|, base, base + |clickDelta|, …), so a value can never be
+ * stranded between steps and become unreachable by the ± buttons.
+ */
 export function bindDragBtn(
   btn: HTMLButtonElement,
   clickDelta: number,
@@ -41,9 +47,15 @@ export function bindDragBtn(
   setVal: (v: number) => void,
   min: number,
   max: number,
+  base = 0,
 ): void {
   const DRAG_THRESHOLD = 8; // px before drag mode activates
   const SENSITIVITY = 0.3; // units per pixel
+  const size = Math.abs(clickDelta);
+  const phase = ((base % size) + size) % size;
+  const clamp = (v: number): number => Math.max(min, Math.min(max, v));
+  // Nearest slot on the base-aligned grid.
+  const snap = (v: number): number => Math.round((v - phase) / size) * size + phase;
   let drag: { startY: number; startVal: number } | null = null;
 
   btn.addEventListener('pointerdown', (e) => {
@@ -56,14 +68,21 @@ export function bindDragBtn(
     if (!drag) return;
     const dy = drag.startY - e.clientY; // positive = upward
     if (Math.abs(dy) >= DRAG_THRESHOLD) {
-      setVal(Math.max(min, Math.min(max, Math.round(drag.startVal + dy * SENSITIVITY))));
+      setVal(clamp(snap(drag.startVal + dy * SENSITIVITY)));
     }
   });
 
   btn.addEventListener('pointerup', (e) => {
     if (!drag) return;
     const moved = Math.abs(drag.startY - e.clientY) >= DRAG_THRESHOLD;
-    if (!moved) setVal(Math.max(min, Math.min(max, getVal() + clickDelta)));
+    // A tap steps one slot in the pressed direction; this also re-aligns an
+    // off-grid value onto the grid (e.g. 8 → 15, or 8 → 0/min going down).
+    if (!moved) {
+      const k = (getVal() - phase) / size;
+      const next =
+        clickDelta > 0 ? (Math.floor(k) + 1) * size + phase : (Math.ceil(k) - 1) * size + phase;
+      setVal(clamp(next));
+    }
     drag = null;
   });
 
@@ -136,6 +155,7 @@ function bindStage(
     (v) => setStage({ deltaSec: v }),
     2,
     600,
+    DEFAULT_STAGE.deltaSec,
   );
   bindDragBtn(
     byId(`${p}-delta-inc`),
@@ -144,6 +164,7 @@ function bindStage(
     (v) => setStage({ deltaSec: v }),
     2,
     600,
+    DEFAULT_STAGE.deltaSec,
   );
 
   // add BPM — ±1, scroll

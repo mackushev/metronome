@@ -172,7 +172,7 @@ export function defaultVoices(): PolyVoice[] {
   ];
 }
 
-const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: null };
+export const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: null };
 
 export function defaultSettings(): Settings {
   return {

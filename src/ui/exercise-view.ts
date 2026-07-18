@@ -112,9 +112,10 @@ export class ExerciseView {
     });
     // Click the header to toggle auto-advance on/off
     this.autoToggle.addEventListener('click', () => this.toggleAuto());
-    // ±15s drag buttons, mirroring the speed trainer "every" control.
-    bindDragBtn(byId('ex-delta-dec'), -15, () => this.getSec(), (v) => this.setSec(v), 2, 600);
-    bindDragBtn(byId('ex-delta-inc'), +15, () => this.getSec(), (v) => this.setSec(v), 2, 600);
+    // ±15s drag buttons, mirroring the speed trainer "every" control. The grid is
+    // aligned to the 20s default (…, 5, 20, 35, 50, …) so the steps stay clean.
+    bindDragBtn(byId('ex-delta-dec'), -15, () => this.getSec(), (v) => this.setSec(v), 2, 600, 20);
+    bindDragBtn(byId('ex-delta-inc'), +15, () => this.getSec(), (v) => this.setSec(v), 2, 600, 20);
 
     // Re-frame the current item when the viewport width changes.
     if (typeof ResizeObserver !== 'undefined') {
