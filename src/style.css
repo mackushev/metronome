@@ -1414,9 +1414,108 @@ body {
 }
 
 
-/* Count-in countdown reuses the big center number, tinted like the accent. */
-.center.counting .bpm-value {
+/* --- Count-in ("get ready") mode ---
+   The circle goes quiet: the whole SVG (dots, sectors, dial) fades out and the
+   count-in visuals are drawn in a separate overlay. The play button stays exactly
+   where it normally sits — it is the fixed center of the composition. */
+.circle-wrap.counting #circle {
+  opacity: 0;
+}
+#circle {
+  transition: opacity 0.2s ease;
+}
+
+/* Hide the normal BPM readout while counting, but keep its boxes (visibility,
+   not display) so the flex column — and therefore the play button — never moves. */
+.center.counting .bpm-value,
+.center.counting .bpm-label {
+  visibility: hidden;
+}
+/* Keep the button above the overlay so the Go splash never covers it. */
+.center.counting .play-btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* The overlay floats over the whole circle, out of the center's flow. Its content
+   is centered in the space *above* the button (padding reserves the button's
+   footprint) so the big number reads where the tempo number normally is. */
+.count-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Reserve the lower area for the button (scales with the circle) so the number
+     and cue sit above it, roughly where the tempo number normally reads. */
+  padding-bottom: 24%;
+  pointer-events: none;
+  z-index: 1;
+}
+.circle-wrap.counting .count-overlay {
+  display: flex;
+}
+
+.count-num {
   color: var(--accent);
+  font-size: clamp(64px, 18vw, 104px);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ready / Set / Go cue: stays on screen (Ready holds through its beats, then
+   Set / Go replace it), flaring once per count via .tick. */
+.count-word {
+  color: var(--accent);
+  font-size: clamp(28px, 8vw, 42px);
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Go — the launch beat — blows up into a splash that covers everything drawn
+   (the countdown number, the frozen circle); only the stop button stays on top. */
+.circle-wrap.go .count-overlay {
+  padding-bottom: 0;
+}
+.circle-wrap.go .count-num {
+  display: none;
+}
+.circle-wrap.go .count-word {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(72px, 26vw, 150px);
+  letter-spacing: 0;
+}
+
+/* The number pulses on each count. Ready holds steady; Set and Go stay visible
+   too but give the same size pulse as the number on their beat. */
+.circle-wrap.counting.tick .count-num,
+.circle-wrap.flash-word.tick .count-word {
+  animation: count-num-pulse 0.35s ease-out;
+}
+
+@keyframes count-num-pulse {
+  0% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circle-wrap.counting.tick .count-num,
+  .circle-wrap.flash-word.tick .count-word {
+    animation: none;
+  }
 }
 
 /* --- Stage view: full-screen black presentation overlay --- */

@@ -25,6 +25,13 @@
               <span class="icon-play">▶</span>
             </button>
           </div>
+          <!-- Count-in overlay: big number + Ready/Set/Go cue. Sits over the
+               circle, independent of the center's flow, so it never shifts the
+               play button — the fixed center of the composition. -->
+          <div class="count-overlay" id="count-overlay" aria-hidden="true">
+            <div class="count-num" id="count-num"></div>
+            <div class="count-word" id="count-word"></div>
+          </div>
           <button class="stage-fab" id="stage-enter" type="button" aria-label="Full-screen stage view" title="Full-screen stage view">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M4 9V5a1 1 0 0 1 1-1h4M20 9V5a1 1 0 0 0-1-1h-4M4 15v4a1 1 0 0 0 1 1h4M20 15v4a1 1 0 0 1-1 1h-4"

@@ -279,17 +279,44 @@ bpmValue.textContent = String(store.get().bpm);
 beatBar.render(store.get());
 
 // --- Frame loop: needle, tick highlight, trainer progress ---
-// While a count-in plays, the big BPM number in the center shows the countdown.
+// While a count-in plays the circle goes quiet: the beat sectors/dots stop
+// running (see frame()), the SVG fades out, and an overlay shows a big countdown
+// number plus a Ready / Set / Go cue. The overlay is separate from the center's
+// flow, so the play button stays put — the fixed anchor of the composition.
+const countNum = document.getElementById('count-num') as HTMLDivElement;
+const countWord = document.getElementById('count-word') as HTMLDivElement;
+const circleWrap = document.querySelector('.circle-wrap') as HTMLElement;
 let countdownShown = false;
+let lastCountIn: number | null = null;
 function updateCenterCountdown(countIn: number | null | undefined): void {
   if (countIn != null) {
-    bpmValue.textContent = String(countIn);
-    center.classList.add('counting');
+    if (!countdownShown) {
+      center.classList.add('counting');
+      circleWrap.classList.add('counting');
+    }
+    // Only act on beat changes so the flash retriggers once per count, not per frame.
+    if (countIn !== lastCountIn) {
+      countNum.textContent = String(countIn);
+      // Ready shows from the start; the final two beats snap to Set then Go.
+      // Go is the launch — blown up to cover everything but the stop button.
+      countWord.textContent = countIn <= 1 ? 'Go' : countIn === 2 ? 'Set' : 'Ready';
+      circleWrap.classList.toggle('go', countIn <= 1);
+      // Ready holds steady; Set and Go blink in with a highlight and fade out.
+      circleWrap.classList.toggle('flash-word', countIn <= 2);
+      // Restart the flash animation by forcing a reflow between class toggles.
+      circleWrap.classList.remove('tick');
+      void circleWrap.offsetWidth;
+      circleWrap.classList.add('tick');
+      lastCountIn = countIn;
+    }
     countdownShown = true;
   } else if (countdownShown) {
     countdownShown = false;
+    lastCountIn = null;
     center.classList.remove('counting');
-    bpmValue.textContent = String(store.get().bpm);
+    circleWrap.classList.remove('counting', 'tick', 'go', 'flash-word');
+    countNum.textContent = '';
+    countWord.textContent = '';
   }
 }
 
@@ -302,9 +329,12 @@ function frame(): void {
     return;
   }
   const pos = engine.position();
-  circle.tick(pos);
+  // During the count-in the beats must not run: freeze the circle and beat bar
+  // so only the countdown cue moves.
+  const counting = pos?.countIn != null;
+  circle.tick(counting ? null : pos);
   updateCenterCountdown(pos?.countIn);
-  beatBar.setActive(pos ? pos.beatIndex : null);
+  beatBar.setActive(pos && !counting ? pos.beatIndex : null);
 
   // A sticky "audio blocked" notice disappears as soon as audio actually plays
   if (noticeSticky && !audioNotice.hidden && engine.audioRunning()) {
