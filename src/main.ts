@@ -347,9 +347,19 @@ function frame(): void {
   const time = engine.currentTime();
   if (engine.running && s.trainer.enabled && trainerBase && time !== null) {
     const elapsed = time - trainerBase.startTime;
-    if (trainerAtMax(s.bpm, trainerBase.startBpm, s.trainer)) {
+    // The overall ceiling is the last stage's cap (null = grow forever).
+    const stages = s.trainer.stages;
+    const overallCap = stages.length ? stages[stages.length - 1].maxBpm : null;
+    // Nowhere left to climb: either the cap was reached from below, or the
+    // target sits at/below the tempo we started from (an up-only trainer can't
+    // go there). Both mean the tempo won't change — say so instead of running a
+    // "+N in Xs" countdown that never fires.
+    const holding =
+      trainerAtMax(s.bpm, trainerBase.startBpm, s.trainer) ||
+      (overallCap !== null && s.bpm >= overallCap);
+    if (holding) {
       circle.setTrainerProgress(1);
-      stageTrainerText = `Max ${s.bpm} BPM`;
+      stageTrainerText = `${s.bpm} BPM · target reached`;
     } else {
       circle.setTrainerProgress(trainerProgress(elapsed, trainerBase.startBpm, s.trainer));
       const toNext = Math.ceil(secondsToNextStep(elapsed, trainerBase.startBpm, s.trainer));
