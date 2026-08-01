@@ -16,6 +16,7 @@ import {
   type TrainerStage,
 } from '../state';
 import { voiceTooFast } from '../audio/engine';
+import { THEMES } from '../themes';
 
 /** Balance positions: beat dot + click dot of growing size */
 const CLICK_VOLUMES: { value: ClickVolume; title: string }[] = [
@@ -335,7 +336,7 @@ function bindPolyVoices(store: Store, callbacks: ControlsCallbacks): void {
     // Tap the colored dot to enable/disable the whole voice
     const dot = document.createElement('button');
     dot.className = 'poly-voice-dot';
-    dot.style.setProperty('--voice-color', meta.color);
+    row.style.setProperty('--voice-color', meta.color);
     dot.setAttribute('aria-label', `${meta.label} on/off`);
     dot.addEventListener('click', () =>
       updateVoice(store, i, { enabled: !store.get().polyrhythm.voices[i].enabled }),
@@ -402,6 +403,52 @@ function bindPolyVoices(store: Store, callbacks: ControlsCallbacks): void {
   sync(store.get());
 }
 
+/** Theme cards use real palette/type/shape samples instead of an opaque select. */
+function bindThemePicker(store: Store): void {
+  const picker = byId<HTMLDivElement>('theme-picker');
+  const cards = THEMES.map((theme) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'theme-card';
+    card.dataset.theme = theme.id;
+    card.setAttribute('role', 'radio');
+    card.style.setProperty('--preview-bg', theme.preview.bg);
+    card.style.setProperty('--preview-panel', theme.preview.panel);
+    card.style.setProperty('--preview-accent', theme.preview.accent);
+    card.style.setProperty('--preview-beat', theme.preview.beat);
+    card.style.setProperty('--preview-trainer', theme.preview.trainer);
+    card.style.setProperty('--preview-radius', theme.preview.radius);
+    card.style.setProperty('--preview-font', theme.preview.font);
+
+    const preview = document.createElement('span');
+    preview.className = 'theme-preview';
+    preview.innerHTML =
+      '<i class="theme-preview-panel"><b>120</b><em></em></i>' +
+      '<i class="theme-preview-beats"><b></b><b></b><b></b></i>';
+    const copy = document.createElement('span');
+    copy.className = 'theme-card-copy';
+    const label = document.createElement('strong');
+    label.textContent = theme.label;
+    const description = document.createElement('small');
+    description.textContent = theme.description;
+    copy.append(label, description);
+    card.append(preview, copy);
+    card.addEventListener('click', () => store.update({ theme: theme.id }));
+    picker.append(card);
+    return card;
+  });
+
+  const sync = (s: ReturnType<Store['get']>): void => {
+    for (const card of cards) {
+      const selected = card.dataset.theme === s.theme;
+      card.classList.toggle('selected', selected);
+      card.setAttribute('aria-checked', String(selected));
+    }
+  };
+  store.subscribe(sync);
+  sync(store.get());
+}
+
 /** Binds the static settings panel markup to the store */
 export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   const soundSeg = byId<HTMLDivElement>('sound-seg');
@@ -431,6 +478,7 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // --- Polyrhythm voices ---
   bindPolyVoices(store, callbacks);
+  bindThemePicker(store);
 
   // --- Clicks vs beats balance ---
   for (const { value, title } of CLICK_VOLUMES) {
@@ -456,11 +504,27 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   // --- Speed trainer ---
   bindTrainer(store);
 
-  // --- Sound: plain collapse toggle (no enabled state, just show/hide) ---
-  const soundPanel = byId<HTMLDivElement>('sound-panel');
-  byId<HTMLButtonElement>('sound-toggle').addEventListener('click', () =>
-    soundPanel.classList.toggle('collapsed'),
-  );
+  // --- Settings popup in the top bar ---
+  const settingsMenu = byId<HTMLDivElement>('settings-menu');
+  const settingsToggle = byId<HTMLButtonElement>('settings-toggle');
+  const settingsPopup = byId<HTMLDivElement>('settings-popup');
+  const setSettingsOpen = (open: boolean): void => {
+    settingsPopup.hidden = !open;
+    settingsToggle.classList.toggle('selected', open);
+    settingsToggle.setAttribute('aria-expanded', String(open));
+  };
+  settingsToggle.addEventListener('click', () => setSettingsOpen(Boolean(settingsPopup.hidden)));
+  document.addEventListener('pointerdown', (event) => {
+    if (!settingsPopup.hidden && !settingsMenu.contains(event.target as Node)) {
+      setSettingsOpen(false);
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !settingsPopup.hidden) {
+      setSettingsOpen(false);
+      settingsToggle.focus();
+    }
+  });
 
   // --- Reflect state back into static controls ---
   store.subscribe((s) => {

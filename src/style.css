@@ -1,7 +1,53 @@
-:root {
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./fonts/space-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./fonts/space-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations');
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  src: url('./fonts/archivo-latin-wght-normal.woff2') format('woff2-variations');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Archivo';
+  src: url('./fonts/archivo-latin-ext-wght-normal.woff2') format('woff2-variations');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root,
+:root[data-theme='classic'] {
   --bg: #101218;
   --panel: #1d212b;
   --panel-border: #3a4358;
+  --control-border: #3a4358;
   --text: #f4f6fa;
   --dim: #a4abbd;
   --accent: #ffb02e;
@@ -9,21 +55,140 @@
   --beat: #5db1ff;
   --active: #ffffff;
   --trainer: #3fd67f;
+  --voice-0: #4dd6b8;
+  --voice-1: #6b8cff;
+  --voice-2: #f4a347;
+  --voice-3: #ef5d6c;
+  --dial-marker: #7fe0a6;
+  --selected-bg: color-mix(in srgb, var(--accent) 18%, var(--bg));
+  --selected-text: var(--accent);
+  --play-text: #14161c;
+  --dial-arrow-shadow: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  --fab-bg: #f0a93b;
+  --fab-text: #0a0a0c;
+  --fab-shadow: 0 8px 22px rgba(240, 169, 59, 0.4);
+  --fab-playing-bg: rgba(19, 20, 24, 0.6);
+  --fab-playing-text: #8a8d96;
+  --fab-playing-border: #2a2c33;
+  --stage-bg: #000;
+  --stage-flash: #23262e;
+  --stage-dot: #2a2e38;
+  --sheet-bg: #fff;
+  --sheet-nav-text: #14161c;
+  --sheet-nav-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+  --progress-track: rgba(0, 0, 0, 0.25);
+  --stage-exit-bg: rgba(255, 255, 255, 0.06);
+  --popup-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-ui);
+  --display-weight: 700;
+  --panel-radius: 6px;
+  --control-radius: 10px;
+  --pill-radius: 10px;
+  --sheet-radius: 12px;
+  --preview-radius: 8px;
+  --chip-radius: 999px;
+  --fab-radius: 16px;
+  --fab-playing-radius: 15px;
+  --panel-padding: 12px 14px;
+  --app-max-width: 1000px;
+  --app-padding: 16px;
+  --tablet-app-padding: 24px;
+  --desktop-app-padding: 32px;
+  --layout-gap: 20px;
+  --desktop-grid-columns: 480px 360px;
+  --desktop-column-gap: 40px;
+  --desktop-right-padding: 8px;
+  --desktop-right-border: 1px solid rgba(255, 255, 255, 0.05);
+  --desktop-right-radius: 14px;
+  --desktop-right-top: -60px;
+  --desktop-mode-width: min(92vw, 880px);
+  --desktop-mode-pill-width: 140px;
   --content-w: min(92vw, 480px);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-ui);
+}
+
+:root[data-theme='acid'] {
+  --bg: #0b0b0d;
+  --panel: #141417;
+  --panel-border: #3a3a42;
+  --control-border: #4a4a52;
+  --text: #ffffff;
+  --dim: #8f8f8a;
+  --accent: #ffe000;
+  --warn: #ff4d6d;
+  --beat: #3ae1ff;
+  --active: #ffffff;
+  --trainer: #c6ff2e;
+  --voice-0: #3ae1ff;
+  --voice-1: #c6ff2e;
+  --voice-2: #ffe000;
+  --voice-3: #ff4d6d;
+  --dial-marker: var(--accent);
+  --selected-bg: var(--accent);
+  --selected-text: var(--bg);
+  --play-text: var(--bg);
+  --dial-arrow-shadow: none;
+  --fab-bg: var(--accent);
+  --fab-text: var(--bg);
+  --fab-shadow: none;
+  --fab-playing-bg: var(--panel);
+  --fab-playing-text: var(--dim);
+  --fab-playing-border: var(--control-border);
+  --stage-bg: #000;
+  --stage-flash: #171719;
+  --stage-dot: #242428;
+  --sheet-nav-text: var(--bg);
+  --sheet-nav-shadow: none;
+  --progress-track: color-mix(in srgb, var(--bg) 72%, transparent);
+  --stage-exit-bg: var(--panel);
+  --popup-shadow: none;
+  --font-ui: 'Space Grotesk', sans-serif;
+  --font-display: 'Archivo', sans-serif;
+  --display-weight: 800;
+  --panel-radius: 3px;
+  --control-radius: 2px;
+  --pill-radius: 2px;
+  --sheet-radius: 3px;
+  --preview-radius: 2px;
+  --chip-radius: 2px;
+  --fab-radius: 6px;
+  --fab-playing-radius: 3px;
+  --panel-padding: 12px 14px;
+  --app-max-width: 1040px;
+  --app-padding: 16px;
+  --layout-gap: 24px;
+  --desktop-grid-columns: 480px 360px;
+  --desktop-column-gap: 48px;
+  --desktop-right-padding: 0;
+  --desktop-right-border: 1px solid transparent;
+  --desktop-right-radius: 0;
+  --desktop-right-top: -60px;
+  --desktop-mode-width: min(92vw, 888px);
+  --desktop-mode-pill-width: 136px;
+  font-family: var(--font-ui);
 }
 
 * {
   box-sizing: border-box;
 }
 
+button,
+input,
+select {
+  font-family: inherit;
+}
+
 /*
- * Suppress all transitions until the first paint.  The collapsible panels start
- * un-collapsed in the markup and are collapsed by the first sync(); without this
- * the green "expanded" border would animate to gray on every load (a visible
- * flicker, most noticeable on fast cached loads).  main.ts removes `.preload`
- * after the first frame.
+ * Keep the app out of the first paint while JS restores the persisted mode and
+ * builds the SVG/dynamic controls. Otherwise the complete but incorrect static
+ * layout flashes before sync(). The page background is already theme-correct.
+ * main.ts removes `.preload` after initialization has reached a stable frame.
  */
+.preload {
+  visibility: hidden;
+}
+
 .preload,
 .preload * {
   transition: none !important;
@@ -42,16 +207,16 @@ body {
 }
 
 #app {
-  max-width: 1000px;
+  max-width: var(--app-max-width);
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--app-padding);
 }
 
 .layout {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: var(--layout-gap);
 }
 
 /* --- Circle --- */
@@ -87,7 +252,7 @@ body {
 .beat-cell {
   flex: 1;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--panel-radius);
   padding: 0;
   cursor: pointer;
   transition: height 0.12s, background 0.12s, filter 0.12s;
@@ -178,7 +343,7 @@ body {
   gap: 10px;
   background: color-mix(in srgb, var(--accent) 16%, var(--panel));
   border: 1px solid var(--accent);
-  border-radius: 10px;
+  border-radius: var(--control-radius);
   padding: 10px 12px;
   font-size: 14px;
   line-height: 1.4;
@@ -190,7 +355,7 @@ body {
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: var(--dim);
   font-size: 14px;
@@ -317,7 +482,7 @@ body {
 /* Dimmed pointer (not full-bright) — shows position without stealing the eye
    from the BPM number */
 .dial-marker {
-  fill: #7fe0a6;
+  fill: var(--dial-marker);
   stroke: var(--bg);
   stroke-width: 2;
   pointer-events: none;
@@ -340,10 +505,10 @@ body {
    not vanish into the dark background (green outline + shadow) */
 .dial-arrow-btn {
   fill: var(--panel);
-  stroke: var(--trainer);
+  stroke: var(--control-border);
   stroke-width: 1.5;
   pointer-events: none;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  filter: var(--dial-arrow-shadow);
 }
 
 .dial-arrow-label {
@@ -467,7 +632,8 @@ body {
 
 .bpm-value {
   font-size: clamp(44px, 12vw, 64px);
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -485,7 +651,7 @@ body {
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: #14161c;
+  color: var(--play-text);
   font-size: 22px;
   cursor: pointer;
   display: flex;
@@ -511,38 +677,17 @@ body {
   gap: 14px;
 }
 
-/* On mobile the right-col wrapper is transparent — its children (controls,
-   sound) flow directly inside .layout with .layout's gap. */
+/* On mobile the right-col wrapper is transparent and its controls flow directly
+   inside .layout. */
 .right-col {
   display: contents;
-}
-
-/* Vertical layout: the sound panel is a direct child of .layout and sits below
-   everything else. It matches the other columns' width. */
-#sound-panel {
-  width: var(--content-w);
-}
-
-/* Sound rows wrap so nothing overflows the content column. */
-#sound-panel .row {
-  flex-wrap: wrap;
-}
-
-/* Single-column layout: push the sound panel to the very bottom of the stack
-   (below the controls and exercise), so nothing but the footer hint text sits
-   under it. On desktop it lives inside the real .right-col flex column and this
-   order has no effect. */
-@media (max-width: 1099.98px) {
-  #sound-panel {
-    order: 1;
-  }
 }
 
 .control-group {
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  border-radius: 6px;
-  padding: 12px 14px;
+  border-radius: var(--panel-radius);
+  padding: var(--panel-padding);
 }
 
 .group-label {
@@ -563,8 +708,8 @@ body {
   min-width: 40px;
   min-height: 40px;
   padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
   background: var(--bg);
   color: var(--text);
   font-size: 16px;
@@ -586,8 +731,8 @@ body {
 
 .seg-btn.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
-  color: var(--accent);
+  background: var(--selected-bg);
+  color: var(--selected-text);
 }
 
 /* Voice selected but the tempo is too fast — the count will smear into a drone. */
@@ -712,7 +857,8 @@ body {
   flex: 1;
   text-align: center;
   font-size: 20px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
   font-variant-numeric: tabular-nums;
   min-width: 32px;
 }
@@ -821,6 +967,118 @@ body {
   accent-color: var(--accent);
 }
 
+/* --- Theme cards: low-priority, visual selection inside the Sound panel --- */
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.theme-card {
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  background: var(--bg);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.theme-card:hover {
+  border-color: var(--dim);
+}
+
+.theme-card.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.theme-preview {
+  position: relative;
+  display: block;
+  height: 54px;
+  overflow: hidden;
+  border-radius: var(--preview-radius);
+  background: var(--preview-bg);
+  font-family: var(--preview-font);
+}
+
+.theme-preview-panel {
+  position: absolute;
+  inset: 8px 38% 8px 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--preview-accent) 34%, var(--preview-panel));
+  border-radius: var(--preview-radius);
+  background: var(--preview-panel);
+  color: var(--preview-accent);
+  font-style: normal;
+}
+
+.theme-preview-panel b {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.theme-preview-panel em {
+  width: 22px;
+  height: 4px;
+  border-radius: var(--preview-radius);
+  background: var(--preview-accent);
+}
+
+.theme-preview-beats {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.theme-preview-beats b {
+  display: block;
+  width: 7px;
+  height: 17px;
+  border-radius: var(--preview-radius);
+  background: var(--preview-beat);
+}
+
+.theme-preview-beats b:first-child {
+  height: 27px;
+  background: var(--preview-accent);
+}
+
+.theme-preview-beats b:last-child {
+  height: 11px;
+  background: var(--preview-trainer);
+}
+
+.theme-card-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: baseline;
+}
+
+.theme-card-copy strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-card-copy small {
+  color: var(--dim);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
 .volume-icon {
   font-size: 14px;
 }
@@ -842,20 +1100,34 @@ body {
   gap: 14px;
 }
 
-/* --- Metronome / Exercises mode switch (two pills) --- */
+/* --- Top bar: mode switch + unobtrusive settings popup --- */
+
+.top-bar {
+  position: relative;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: var(--content-w);
+  margin: 0 auto 18px;
+  /* On desktop the controls column is intentionally pulled up beside this row.
+     Let clicks pass through the unused part of the wide header. */
+  pointer-events: none;
+}
 
 .mode-switch {
   display: flex;
   gap: 8px;
-  width: var(--content-w);
-  margin: 0 auto 18px;
+  flex: 1;
+  min-width: 0;
+  pointer-events: auto;
 }
 
 .mode-pill {
   flex: 1;
   min-height: 42px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
+  border-radius: var(--pill-radius);
+  border: 1px solid var(--control-border);
   background: var(--panel);
   color: var(--dim);
   font-size: 15px;
@@ -865,8 +1137,72 @@ body {
 
 .mode-pill.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 18%, var(--bg));
-  color: var(--accent);
+  background: var(--selected-bg);
+  color: var(--selected-text);
+}
+
+.settings-menu {
+  position: relative;
+  flex: 0 0 auto;
+  pointer-events: auto;
+}
+
+.settings-toggle {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--control-border);
+  border-radius: var(--pill-radius);
+  background: var(--panel);
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.settings-toggle:hover {
+  color: var(--text);
+  border-color: var(--dim);
+}
+
+.settings-toggle.selected {
+  color: var(--selected-text);
+  background: var(--selected-bg);
+  border-color: var(--accent);
+}
+
+.settings-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-popup[hidden] {
+  display: none;
+}
+
+.settings-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1100;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 86px);
+  overflow-y: auto;
+  background: var(--panel);
+  box-shadow: var(--popup-shadow);
+}
+
+.settings-popup .row {
+  flex-wrap: wrap;
+}
+
+.settings-heading {
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.settings-first-label {
+  margin-top: 0;
 }
 
 /* --- Polyrhythm mode: panel visibility --- */
@@ -891,14 +1227,6 @@ body {
   display: block;
 }
 
-/* Sound panel is collapsible but neutral — no green "active" accent when open */
-#sound-panel:not(.collapsed) {
-  border-color: var(--panel-border);
-}
-#sound-panel:not(.collapsed) .collapsible-header {
-  color: var(--dim);
-}
-
 /* --- Polyrhythm voice panel --- */
 
 .group-poly .group-label {
@@ -916,7 +1244,12 @@ body {
   grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 8px 10px;
+  --voice-color: var(--voice-0);
 }
+
+.poly-voice:nth-child(2) { --voice-color: var(--voice-1); }
+.poly-voice:nth-child(3) { --voice-color: var(--voice-2); }
+.poly-voice:nth-child(4) { --voice-color: var(--voice-3); }
 
 .poly-voice-dot {
   width: 16px;
@@ -949,8 +1282,8 @@ body {
   grid-column: 2;
   min-width: 0;
   padding: 5px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
   background: var(--panel);
   color: var(--text);
   font-size: 13px;
@@ -969,6 +1302,7 @@ body {
 .poly-voice-vol {
   grid-column: 2 / -1;
   width: 100%;
+  accent-color: var(--voice-color);
 }
 
 /* --- Polyrhythm circle: per-voice ring dots --- */
@@ -986,10 +1320,10 @@ body {
   stroke-width: 2.5;
   cursor: pointer;
 }
-.dot-poly-v0 { fill: #4dd6b8; }
-.dot-poly-v1 { fill: #6b8cff; }
-.dot-poly-v2 { fill: #f4a347; }
-.dot-poly-v3 { fill: #ef5d6c; }
+.dot-poly-v0 { fill: var(--voice-0); }
+.dot-poly-v1 { fill: var(--voice-1); }
+.dot-poly-v2 { fill: var(--voice-2); }
+.dot-poly-v3 { fill: var(--voice-3); }
 
 .dot-poly.accent {
   r: 8.5;
@@ -1005,10 +1339,10 @@ body {
   display: none;
 }
 /* Active highlight: brighten the fill, keep the voice color as the border */
-.dot-poly-v0.active { fill: var(--active); stroke: #4dd6b8; }
-.dot-poly-v1.active { fill: var(--active); stroke: #6b8cff; }
-.dot-poly-v2.active { fill: var(--active); stroke: #f4a347; }
-.dot-poly-v3.active { fill: var(--active); stroke: #ef5d6c; }
+.dot-poly-v0.active { fill: var(--active); stroke: var(--voice-0); }
+.dot-poly-v1.active { fill: var(--active); stroke: var(--voice-1); }
+.dot-poly-v2.active { fill: var(--active); stroke: var(--voice-2); }
+.dot-poly-v3.active { fill: var(--active); stroke: var(--voice-3); }
 
 /* --- Exercise viewer: full-width practice sheet below the metronome --- */
 
@@ -1029,9 +1363,9 @@ body {
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #fff;
+  background: var(--sheet-bg);
   border: 1px solid var(--panel-border);
-  border-radius: 12px;
+  border-radius: var(--sheet-radius);
 }
 
 .exercise-viewport img {
@@ -1058,8 +1392,8 @@ body {
   font-size: 36px;
   font-weight: 700;
   line-height: 1;
-  color: #14161c;
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7);
+  color: var(--sheet-nav-text);
+  text-shadow: var(--sheet-nav-shadow);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s;
@@ -1101,7 +1435,7 @@ body {
   left: 0;
   right: 0;
   height: 6px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--progress-track);
   z-index: 3;
   pointer-events: none;
 }
@@ -1181,9 +1515,9 @@ body {
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #fff;
+  background: var(--sheet-bg);
   border: 1px solid var(--panel-border);
-  border-radius: 8px;
+  border-radius: var(--preview-radius);
   opacity: 0.45;
   filter: grayscale(0.15);
   transition: opacity 0.3s;
@@ -1221,8 +1555,8 @@ body {
 .exercise-controls select {
   min-height: 38px;
   padding: 0 8px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
+  border-radius: var(--control-radius);
+  border: 1px solid var(--control-border);
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -1254,8 +1588,8 @@ body {
 .ex-page-chip {
   min-height: 32px;
   padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid var(--panel-border);
+  border-radius: var(--chip-radius);
+  border: 1px solid var(--control-border);
   background: var(--bg);
   color: var(--dim);
   font-size: 13px;
@@ -1291,27 +1625,24 @@ body {
 
 @media (min-width: 720px) and (max-width: 1099.98px) {
   #app {
-    padding: 24px;
+    padding: var(--tablet-app-padding);
   }
 }
 
 @media (min-width: 1100px) {
   #app {
-    padding: 32px;
+    padding: var(--desktop-app-padding);
   }
 
-  /* Two-column grid: circle on the left, controls (speed trainer, then sound)
-     on the right. Exercise spans both columns and, when visible, pushes the
-     sound panel down so it sits strictly below the exercise on the right. */
+  /* Two-column grid: circle on the left and mode-specific controls on the right.
+     The exercise sheet spans both columns when visible. */
   .layout {
     display: grid;
-    grid-template-columns: 480px 360px;
+    grid-template-columns: var(--desktop-grid-columns);
     align-items: start;
     justify-content: center;
-    column-gap: 40px;
-    /* Matches the gap between .control-group items inside .controls, so the
-       sound panel visually reads as a direct continuation of the speed
-       trainer stack in metronome mode. */
+    column-gap: var(--desktop-column-gap);
+    /* Matches the gap between .control-group items inside .controls. */
     row-gap: 14px;
   }
 
@@ -1320,12 +1651,7 @@ body {
     width: 480px;
   }
 
-  /* Right column: controls (speed trainer) on top, sound directly beneath —
-     stacked tightly in a single grid cell so sound reads as a continuation
-     of the trainer stack instead of being pushed down by the tall circle.
-     Pulled up to align with the mode-switch row at the top of the page,
-     and framed with a barely-visible border so it doesn't blend into the
-     mode-switch tabs sitting just to its left. */
+  /* Right column: controls are pulled up to align with the top-bar row. */
   .right-col {
     display: flex;
     flex-direction: column;
@@ -1333,15 +1659,14 @@ body {
     grid-column: 2;
     width: 360px;
     box-sizing: border-box;
-    padding: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
+    padding: var(--desktop-right-padding);
+    border: var(--desktop-right-border);
+    border-radius: var(--desktop-right-radius);
     position: relative;
-    top: -60px;
+    top: var(--desktop-right-top);
   }
 
-  .controls,
-  #sound-panel {
+  .controls {
     width: 100%;
   }
 
@@ -1351,20 +1676,23 @@ body {
     width: 100%;
   }
 
-  /* Mode-switch tabs align with the left edge of the grid, not centered. */
+  /* The top bar spans the same width as the desktop content grid. */
+  .top-bar {
+    width: var(--desktop-mode-width);
+  }
+
   .mode-switch {
-    width: min(92vw, 880px);
-    margin: 0 auto 18px;
+    flex: 0 0 auto;
     justify-content: flex-start;
   }
   .mode-pill {
     flex: 0 0 auto;
     padding: 0 24px;
-    min-width: 140px;
+    min-width: var(--desktop-mode-pill-width);
   }
 
   .page-bottom {
-    width: min(92vw, 880px);
+    width: var(--desktop-mode-width);
   }
 }
 
@@ -1378,15 +1706,15 @@ body {
   right: 0;
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: var(--fab-radius);
   border: none;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #F0A93B;
-  color: #0a0a0c;
-  box-shadow: 0 8px 22px rgba(240, 169, 59, 0.4);
+  background: var(--fab-bg);
+  color: var(--fab-text);
+  box-shadow: var(--fab-shadow);
   cursor: pointer;
   z-index: 900;
   transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease,
@@ -1404,10 +1732,10 @@ body {
 .stage-fab.playing {
   width: 48px;
   height: 48px;
-  border-radius: 15px;
-  background: rgba(19, 20, 24, 0.6);
-  color: #8A8D96;
-  border: 1px solid #2a2c33;
+  border-radius: var(--fab-playing-radius);
+  background: var(--fab-playing-bg);
+  color: var(--fab-playing-text);
+  border: 1px solid var(--fab-playing-border);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   box-shadow: none;
@@ -1466,7 +1794,8 @@ body {
 .count-num {
   color: var(--accent);
   font-size: clamp(64px, 18vw, 104px);
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -1476,7 +1805,8 @@ body {
 .count-word {
   color: var(--accent);
   font-size: clamp(28px, 8vw, 42px);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
   letter-spacing: 3px;
   text-transform: uppercase;
   line-height: 1;
@@ -1532,7 +1862,7 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--stage-bg);
   color: var(--active);
   cursor: pointer;
   overflow: hidden;
@@ -1553,18 +1883,18 @@ body {
 
 @keyframes stage-flash {
   0% {
-    background: #23262e;
+    background: var(--stage-flash);
   }
   100% {
-    background: #000;
+    background: var(--stage-bg);
   }
 }
 @keyframes stage-flash-accent {
   0% {
-    background: color-mix(in srgb, var(--accent) 40%, #000);
+    background: color-mix(in srgb, var(--accent) 40%, var(--stage-bg));
   }
   100% {
-    background: #000;
+    background: var(--stage-bg);
   }
 }
 
@@ -1609,8 +1939,8 @@ body {
   position: relative;
   overflow: hidden;
   width: min(46vw, 460px);
-  background: #fff;
-  border-radius: 8px;
+  background: var(--sheet-bg);
+  border-radius: var(--preview-radius);
 }
 
 .stage-ex-viewport img {
@@ -1637,7 +1967,8 @@ body {
 
 .stage-number {
   font-size: min(70vh, 46vw);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
   line-height: 0.9;
   font-variant-numeric: tabular-nums;
   color: var(--active);
@@ -1661,12 +1992,12 @@ body {
   width: min(6vh, 44px);
   height: min(6vh, 44px);
   border-radius: 50%;
-  background: #2a2e38;
+  background: var(--stage-dot);
   transition: background 0.06s, transform 0.06s;
 }
 
 .stage-dot.accent {
-  background: color-mix(in srgb, var(--accent) 35%, #2a2e38);
+  background: color-mix(in srgb, var(--accent) 35%, var(--stage-dot));
 }
 
 .stage-dot.active {
@@ -1686,7 +2017,7 @@ body {
   height: 52px;
   border-radius: 50%;
   border: 1px solid var(--panel-border);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--stage-exit-bg);
   color: var(--dim);
   font-size: 22px;
   cursor: pointer;

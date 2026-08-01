@@ -53,6 +53,46 @@ describe('smoke: the app mounts', () => {
     expect(document.querySelector('#sound-seg .seg-btn[data-value="voice"]')).not.toBeNull();
   });
 
+  it('settings open from the top-bar menu and close with Escape', () => {
+    const toggle = document.getElementById('settings-toggle') as HTMLButtonElement;
+    const popup = document.getElementById('settings-popup') as HTMLDivElement;
+    expect(popup.hidden).toBe(true);
+
+    toggle.click();
+    expect(popup.hidden).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(popup.hidden).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('Speed trainer header enables, expands, disables and collapses the mode', () => {
+    const toggle = document.getElementById('trainer-toggle') as HTMLButtonElement;
+    const panel = document.getElementById('trainer-panel') as HTMLDivElement;
+    expect(panel.classList.contains('collapsed')).toBe(true);
+
+    toggle.click();
+    expect(panel.classList.contains('collapsed')).toBe(false);
+
+    toggle.click();
+    expect(panel.classList.contains('collapsed')).toBe(true);
+  });
+
+  it('theme cards show visual choices and apply the selected theme', () => {
+    const cards = document.querySelectorAll<HTMLButtonElement>('#theme-picker .theme-card');
+    expect(cards.length).toBe(2);
+    expect(cards[0].getAttribute('aria-checked')).toBe('true');
+    expect(cards[0].querySelector('.theme-preview')).not.toBeNull();
+
+    cards[1].click();
+    expect(document.documentElement.dataset.theme).toBe('acid');
+    expect(cards[1].getAttribute('aria-checked')).toBe('true');
+
+    cards[0].click();
+    expect(document.documentElement.dataset.theme).toBe('classic');
+  });
+
   it('outer selectors: 8 dots per arc plus sector backdrops', () => {
     expect(document.querySelectorAll('#circle .sel-dot.sel-beats').length).toBe(8);
     expect(document.querySelectorAll('#circle .sel-dot.sel-subdiv').length).toBe(8);

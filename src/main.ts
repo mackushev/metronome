@@ -1,4 +1,3 @@
-import './style.css';
 import { MetronomeEngine } from './audio/engine';
 import { modeFromUrl, pushMode, replaceMode, onPopState } from './router';
 import {
@@ -23,9 +22,11 @@ import { CircleView } from './ui/circle';
 import { bindControls } from './ui/controls';
 import { ExerciseView } from './ui/exercise-view';
 import { StageView } from './ui/stage-view';
+import { applyTheme } from './themes';
 
 // --- Determine the initial mode: URL wins, then localStorage, then default ---
 const savedSettings = loadSettings();
+applyTheme(savedSettings.theme);
 const urlMode = modeFromUrl();
 if (urlMode != null) {
   // The URL explicitly requests a mode — override whatever localStorage had.
@@ -272,6 +273,7 @@ center.addEventListener('pointercancel', endDrag);
 // their identity unless a patch replaces them. Ref-compare `trainer` to avoid
 // stringifying on every unrelated update (e.g. per-beat BPM ticks).
 let prevTrainer = store.get().trainer;
+let prevTheme = store.get().theme;
 store.subscribe((s) => {
   bpmValue.textContent = String(s.bpm);
   if (s.mode === 'polyrhythm') circle.renderPoly(s);
@@ -280,6 +282,10 @@ store.subscribe((s) => {
   if (s.trainer !== prevTrainer) {
     prevTrainer = s.trainer;
     resetTrainerBase();
+  }
+  if (s.theme !== prevTheme) {
+    prevTheme = s.theme;
+    applyTheme(s.theme);
   }
   // Most settings changes need only one repaint while playback is idle.
   requestFrameLoop();

@@ -1,3 +1,5 @@
+import { isThemeName, type ThemeName } from './themes';
+
 /** tick — the beat sounds like a regular subdivision tick */
 export type BeatState = 'normal' | 'accent' | 'mute' | 'tick';
 export type SoundName = 'click' | 'beep' | 'cowbell' | 'kick' | 'snare' | 'hihat' | 'ride';
@@ -61,6 +63,8 @@ export interface ExerciseState {
 export interface Settings {
   /** Active top-level page mode (selected by the tabs at the top) */
   mode: AppMode;
+  /** Complete visual theme: palette, typography, geometry and layout chrome. */
+  theme: ThemeName;
   bpm: number;
   /** Number of beats per measure */
   beats: number;
@@ -105,10 +109,10 @@ export const SOUNDS: { name: SoundName; label: string }[] = [
 
 /** Display label + ring color for each polyrhythm voice (index 0..POLY_VOICES-1). */
 export const VOICE_META: { label: string; color: string }[] = [
-  { label: 'Voice 1', color: '#4dd6b8' },
-  { label: 'Voice 2', color: '#6b8cff' },
-  { label: 'Voice 3', color: '#f4a347' },
-  { label: 'Voice 4', color: '#ef5d6c' },
+  { label: 'Voice 1', color: 'var(--voice-0)' },
+  { label: 'Voice 2', color: 'var(--voice-1)' },
+  { label: 'Voice 3', color: 'var(--voice-2)' },
+  { label: 'Voice 4', color: 'var(--voice-3)' },
 ];
 
 /** Gain multiplier for subdivision clicks per balance position */
@@ -177,6 +181,7 @@ export const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: n
 export function defaultSettings(): Settings {
   return {
     mode: 'metronome',
+    theme: 'classic',
     bpm: 120,
     beats: 4,
     subdivision: 1,
@@ -290,6 +295,7 @@ export function loadSettings(): Settings {
 
     return {
       mode,
+      theme: isThemeName(parsed.theme) ? parsed.theme : fallback.theme,
       bpm: clampBpm(Number(parsed.bpm) || fallback.bpm),
       beats,
       subdivision: (SUBDIVISIONS as readonly number[]).includes(Number(parsed.subdivision))

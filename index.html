@@ -4,16 +4,75 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#14161c" />
+    <meta name="theme-color" content="#101218" />
+    <script>
+      try {
+        const saved = JSON.parse(localStorage.getItem('metronome-settings-v1') || '{}');
+        if (saved.theme === 'acid') {
+          document.documentElement.dataset.theme = 'acid';
+          document.querySelector('meta[name="theme-color"]').content = '#0b0b0d';
+        }
+      } catch {}
+    </script>
+    <!-- Keep the first paint fully styled. Loading CSS from main.ts allowed the
+         browser to briefly paint the raw document while the module graph loaded. -->
+    <link
+      rel="preload"
+      href="/src/fonts/space-grotesk-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/src/fonts/archivo-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/src/style.css" />
     <title>Metronome</title>
   </head>
   <body>
     <div id="app" class="mode-metronome preload">
-      <nav class="mode-switch" aria-label="View">
-        <button class="mode-pill selected" id="mode-metronome" type="button">Metronome</button>
-        <button class="mode-pill" id="mode-exercises" type="button">Exercises</button>
-        <button class="mode-pill" id="mode-polyrhythm" type="button">Polyrhythm</button>
-      </nav>
+      <header class="top-bar">
+        <nav class="mode-switch" aria-label="View">
+          <button class="mode-pill selected" id="mode-metronome" type="button">Metronome</button>
+          <button class="mode-pill" id="mode-exercises" type="button">Exercises</button>
+          <button class="mode-pill" id="mode-polyrhythm" type="button">Polyrhythm</button>
+        </nav>
+        <div class="settings-menu" id="settings-menu">
+          <button
+            class="settings-toggle"
+            id="settings-toggle"
+            type="button"
+            aria-label="Settings"
+            aria-haspopup="dialog"
+            aria-controls="settings-popup"
+            aria-expanded="false"
+            title="Settings"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <div class="control-group settings-popup" id="settings-popup" role="dialog" aria-label="Settings" hidden>
+            <div class="group-label settings-heading">Settings</div>
+            <div class="balance-label settings-first-label">Beat sound</div>
+            <div class="row seg" id="sound-seg"></div>
+            <div class="balance-label">Clicks vs beats</div>
+            <div class="row seg" id="balance-seg"></div>
+            <div class="balance-label">Volume</div>
+            <div class="row group-volume">
+              <span class="volume-icon">🔈</span>
+              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
+              <span class="volume-icon">🔊</span>
+            </div>
+            <div class="balance-label">Theme</div>
+            <div class="theme-picker" id="theme-picker" role="radiogroup" aria-label="Visual theme"></div>
+          </div>
+        </div>
+      </header>
       <main class="layout">
         <section class="circle-col">
           <div class="circle-wrap">
@@ -47,23 +106,6 @@
         </section>
 
         <div class="right-col">
-        <!-- Sound + volume. Collapsed by default; state is not persisted so
-             each session starts with the panel closed. -->
-        <div class="control-group collapsible-panel group-sound collapsed" id="sound-panel">
-          <button class="collapsible-header" id="sound-toggle" type="button">Sound</button>
-          <div class="collapsible-body">
-            <!-- Sound of the main beat (metronome / exercises, and the polyrhythm base ticks) -->
-            <div class="row seg" id="sound-seg"></div>
-            <div class="balance-label">Clicks vs beats</div>
-            <div class="row seg" id="balance-seg"></div>
-            <div class="balance-label">Volume</div>
-            <div class="row group-volume">
-              <span class="volume-icon">🔈</span>
-              <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
-              <span class="volume-icon">🔊</span>
-            </div>
-          </div>
-        </div>
         <section class="controls">
           <!-- Collapsible Speed trainer panel -->
           <div class="control-group collapsible-panel" id="trainer-panel">
