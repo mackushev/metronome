@@ -215,7 +215,7 @@ function syncStage(index: number, stage: TrainerStage): void {
 
 /** Bind the complete Speed Trainer block. */
 function bindTrainer(store: Store): void {
-  const trainerToggle = byId<HTMLDivElement>('trainer-toggle');
+  const trainerToggle = byId<HTMLButtonElement>('trainer-toggle');
   const trainerPanel = byId<HTMLDivElement>('trainer-panel');
   const addStageBtn = byId<HTMLButtonElement>('trainer-add-stage');
   const stage1El = byId<HTMLDivElement>('trainer-stage-1');
@@ -458,7 +458,7 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // --- Sound: plain collapse toggle (no enabled state, just show/hide) ---
   const soundPanel = byId<HTMLDivElement>('sound-panel');
-  byId<HTMLDivElement>('sound-toggle').addEventListener('click', () =>
+  byId<HTMLButtonElement>('sound-toggle').addEventListener('click', () =>
     soundPanel.classList.toggle('collapsed'),
   );
 

@@ -23,7 +23,7 @@ async function mount() {
   const store = new Store(defaultSettings());
   const view = new ExerciseView(store);
   await view.show();
-  return store;
+  return { store, view };
 }
 
 /** Mount with a second page added to the same topic, so the page picker is meaningful. */
@@ -50,7 +50,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('loads content on show and renders the first item', async () => {
-    const store = await mount();
+    const { store } = await mount();
     const img = document.getElementById('ex-img') as HTMLImageElement;
     expect(img.src).toContain('content/sample.svg');
     // 8x2 grid -> 16 items
@@ -65,7 +65,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('page chips are derived (one per page) — no combobox', async () => {
-    const store = await mountMultiPage();
+    const { store } = await mountMultiPage();
     expect(document.querySelector('#ex-page')).toBeNull(); // no <select>
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     topic.value = 'Warm-ups';
@@ -78,7 +78,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('the page chips stay hidden for a single-page topic (nothing to choose)', async () => {
-    const store = await mount();
+    const { store } = await mount();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
@@ -91,7 +91,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('the page chips show once a topic spans more than one page', async () => {
-    const store = await mountMultiPage();
+    const { store } = await mountMultiPage();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
@@ -110,7 +110,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('toggling chips builds the page set; clearing all means "all pages"', async () => {
-    const store = await mountMultiPage();
+    const { store } = await mountMultiPage();
     const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     topic.value = 'Warm-ups';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
@@ -132,7 +132,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('the overlay arrows step prev/next within the filter (wrapping)', async () => {
-    const store = await mount();
+    const { store } = await mount();
     (document.getElementById('ex-next') as HTMLButtonElement).click();
     expect(store.get().exercise.currentId).toBe('0001-2');
     // from the first item, prev wraps to the last of the 16
@@ -142,7 +142,7 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('the Random toggle is stored', async () => {
-    const store = await mount();
+    const { store } = await mount();
     const random = document.getElementById('ex-random') as HTMLInputElement;
     random.checked = true;
     random.dispatchEvent(new Event('change', { bubbles: true }));
@@ -150,8 +150,8 @@ describe('ExerciseView (jsdom integration)', () => {
   });
 
   it('enabling Auto records the interval', async () => {
-    const store = await mount();
-    const autoToggle = document.getElementById('ex-auto-toggle') as HTMLDivElement;
+    const { store } = await mount();
+    const autoToggle = document.getElementById('ex-auto-toggle') as HTMLButtonElement;
     const inc = document.getElementById('ex-delta-inc') as HTMLButtonElement;
     // Click the header to toggle auto-advance on (restores the last value, default 20s)
     autoToggle.click();
@@ -163,5 +163,51 @@ describe('ExerciseView (jsdom integration)', () => {
     // Click again to turn off
     autoToggle.click();
     expect(store.get().exercise.autoSec).toBe(0);
+  });
+
+  it('re-picks the preview after manual navigation', async () => {
+    const { store } = await mount();
+    (document.getElementById('ex-auto-toggle') as HTMLButtonElement).click();
+    expect(document.getElementById('ex-preview-label')!.textContent).toContain('2/16');
+
+    (document.getElementById('ex-next') as HTMLButtonElement).click();
+
+    expect(store.get().exercise.currentId).toBe('0001-2');
+    expect(document.getElementById('ex-preview-label')!.textContent).toContain('3/16');
+  });
+
+  it('keeps the cached preview inside a newly selected page', async () => {
+    const { store } = await mountMultiPage();
+    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
+    topic.value = 'Warm-ups';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    (document.getElementById('ex-auto-toggle') as HTMLButtonElement).click();
+
+    const page2 = document.querySelector(
+      '#ex-page-chips .ex-page-chip[data-page="2"]',
+    ) as HTMLButtonElement;
+    page2.click();
+
+    expect(store.get().exercise.currentId).toBe('0002-1');
+    expect(document.getElementById('ex-preview-label')!.textContent).toContain('2/16');
+    expect((document.getElementById('ex-preview-img') as HTMLImageElement).src).toContain('sample.svg');
+  });
+
+  it('retries content loading after a transient manifest failure', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockImplementation(mockFetch());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const store = new Store(defaultSettings());
+    const view = new ExerciseView(store);
+
+    await view.show();
+    expect(store.get().exercise.currentId).toBeNull();
+    await view.show();
+
+    expect(store.get().exercise.currentId).toBe('0001-1');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

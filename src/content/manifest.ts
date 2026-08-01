@@ -36,17 +36,16 @@ function baseId(filename: string): string {
 }
 
 /** Turn a loaded group into normalized items (grid expanded, defaults filled). */
-function itemsFromSource(source: Source, startOrder: number): Item[] {
+function itemsFromSource(source: Source): Item[] {
   const out: Item[] = [];
   const push = (spec: ItemSpec, index: number, bbox: BBox) => {
     out.push({
       id: spec.id ?? `${source.id}-${index + 1}`,
-      image: spec.image ?? source.image.id,
+      image: source.image.id,
       bbox,
       title: spec.title,
       page: spec.page == null ? source.page : String(spec.page),
       topic: spec.topic == null ? source.topic : String(spec.topic),
-      order: startOrder + index,
     });
   };
 
@@ -85,7 +84,7 @@ export function composeModel(sources: Source[]): ContentModel {
 
   for (const source of sources) {
     if (source.image) imagesById.set(source.image.id, source.image);
-    for (const it of itemsFromSource(source, items.length)) items.push(it);
+    for (const it of itemsFromSource(source)) items.push(it);
   }
 
   const pages: Page[] = [];

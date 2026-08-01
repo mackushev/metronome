@@ -89,6 +89,30 @@ const VOICES: Record<SoundName, Voice> = {
 /** Subdivision clicks decay this much faster than beats */
 const SUB_DECAY_FACTOR = 0.55;
 
+/** One reusable second of white noise per audio context. Individual hits use
+    short slices at random offsets, avoiding AudioBuffer allocation on the
+    scheduler's hot path. */
+const NOISE_BUFFERS = new WeakMap<AudioContext, AudioBuffer>();
+
+function noiseBuffer(ctx: AudioContext): AudioBuffer {
+  const cached = NOISE_BUFFERS.get(ctx);
+  if (cached) return cached;
+  const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  NOISE_BUFFERS.set(ctx, buffer);
+  return buffer;
+}
+
+function startNoise(ctx: AudioContext, target: AudioNode, time: number, duration: number): void {
+  const buffer = noiseBuffer(ctx);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(target);
+  const maxOffset = Math.max(0, buffer.duration - duration);
+  source.start(time, Math.random() * maxOffset, duration);
+}
+
 /**
  * Schedules a single metronome click at the exact audio time `time`.
  * `subLevel` scales subdivision clicks relative to a normal beat (0..1).
@@ -143,27 +167,16 @@ export function scheduleSound(
 
   if (voice.strike) {
     // A short noise burst — the stick hitting the metal
-    const len = Math.max(1, Math.floor(ctx.sampleRate * 0.006));
-    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
     const noiseGain = ctx.createGain();
     noiseGain.gain.setValueAtTime(peak * 0.4, time);
-    noise.connect(noiseGain).connect(dest);
-    noise.start(time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.006);
+    noiseGain.connect(dest);
+    startNoise(ctx, noiseGain, time, 0.006);
   }
 
   if (voice.noise) {
     // A drum noise component (snare rattle, hi-hat) with its own decay envelope
     const nDecay = kind === 'sub' ? voice.noise.decay * SUB_DECAY_FACTOR : voice.noise.decay;
-    const len = Math.max(1, Math.floor(ctx.sampleRate * nDecay));
-    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
     const noiseGain = ctx.createGain();
     const nPeak = peak * voice.noise.gain;
     noiseGain.gain.setValueAtTime(nPeak, time);
@@ -176,8 +189,7 @@ export function scheduleSound(
       hp.connect(dest);
       nTarget = hp;
     }
-    noise.connect(noiseGain).connect(nTarget);
-    noise.start(time);
-    noise.stop(time + nDecay + 0.01);
+    noiseGain.connect(nTarget);
+    startNoise(ctx, noiseGain, time, nDecay);
   }
 }

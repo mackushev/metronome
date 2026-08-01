@@ -80,7 +80,7 @@ export class ExerciseView {
 
   /** The topic the page picker is currently populated for (avoids rebuilding it every sync). */
   private pagesPopulatedFor: string | null = null;
-  private readonly autoToggle = byId<HTMLDivElement>('ex-auto-toggle');
+  private readonly autoToggle = byId<HTMLButtonElement>('ex-auto-toggle');
   private readonly autoNum = byId<HTMLSpanElement>('ex-delta-num');
   private readonly randomChk = byId<HTMLInputElement>('ex-random');
   private readonly autoPanel = byId<HTMLDivElement>('ex-auto-panel');
@@ -167,7 +167,13 @@ export class ExerciseView {
           this.showEmpty();
         });
     }
-    await this.loading;
+    const loading = this.loading;
+    if (loading) {
+      await loading;
+      // A successful load is guarded by `model`; a failed one may be retried the
+      // next time the view is shown (for example, after connectivity returns).
+      if (this.loading === loading) this.loading = null;
+    }
     this.syncControls();
     this.render();
     // Schedule a deferred re-render: after the element is unhidden the browser
@@ -237,6 +243,7 @@ export class ExerciseView {
     const nextState = { ...this.s(), ...p };
     const list = this.filtered(nextState);
     const keep = list.some((it) => it.id === nextState.currentId);
+    this.resetAutoAfterNavigation();
     this.patch({ ...p, currentId: keep ? nextState.currentId : (list[0]?.id ?? null) });
   }
 
@@ -251,7 +258,17 @@ export class ExerciseView {
   /** Manual prev/next within the current filter (overlay arrows). */
   private step(dir: number): void {
     const target = step(this.filtered(), this.s().currentId, dir);
-    if (target) this.patch({ currentId: target.id });
+    if (target) {
+      this.resetAutoAfterNavigation();
+      this.patch({ currentId: target.id });
+    }
+  }
+
+  /** Re-pick the preview and give a manually selected exercise a full interval. */
+  private resetAutoAfterNavigation(): void {
+    this.hidePreview();
+    this.pendingAdvance = false;
+    if (this.autoActive) this.autoStartedAt = performance.now();
   }
 
   /** One auto-advance step within the current filter. */

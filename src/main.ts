@@ -172,7 +172,10 @@ const stageView = new StageView(store, () => togglePlay(), exerciseView);
 const appEl = document.getElementById('app')!;
 
 // --- Stage view: a full-screen presentation overlay, orthogonal to the mode ---
-document.getElementById('stage-enter')!.addEventListener('click', () => stageView.show());
+document.getElementById('stage-enter')!.addEventListener('click', () => {
+  stageView.show();
+  requestFrameLoop();
+});
 const modeMetronome = document.getElementById('mode-metronome') as HTMLButtonElement;
 const modeExercises = document.getElementById('mode-exercises') as HTMLButtonElement;
 const modePolyrhythm = document.getElementById('mode-polyrhythm') as HTMLButtonElement;
@@ -231,11 +234,17 @@ function togglePlay(): void {
   document.getElementById('stage-enter')!.classList.toggle('playing', engine.running);
   if (engine.running) maybeShowIosHint();
   exerciseView.setPlaying(engine.running);
+  // Start animation while playing, or paint one final idle frame after stop.
+  requestFrameLoop();
 }
 
 playBtn.addEventListener('click', togglePlay);
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && !(event.target instanceof HTMLInputElement)) {
+  const target = event.target instanceof Element ? event.target : null;
+  const interactive = target?.closest(
+    'button, input, select, textarea, a[href], [role="button"], [contenteditable]:not([contenteditable="false"])',
+  );
+  if (event.code === 'Space' && !interactive) {
     event.preventDefault();
     togglePlay();
   }
@@ -272,6 +281,8 @@ store.subscribe((s) => {
     prevTrainer = s.trainer;
     resetTrainerBase();
   }
+  // Most settings changes need only one repaint while playback is idle.
+  requestFrameLoop();
 });
 // syncMode() above already rendered the circle for the initial mode; only the
 // bits it does not touch need an initial paint.
@@ -320,12 +331,19 @@ function updateCenterCountdown(countIn: number | null | undefined): void {
   }
 }
 
+let frameRaf: number | null = null;
+
+function requestFrameLoop(): void {
+  if (frameRaf === null) frameRaf = requestAnimationFrame(frame);
+}
+
 function frame(): void {
+  frameRaf = null;
   if (store.get().mode === 'polyrhythm') {
     circle.polyTick(engine.polyPosition());
     circle.setTrainerProgress(null);
     stageView.tick(engine.position());
-    requestAnimationFrame(frame);
+    if (engine.running) requestFrameLoop();
     return;
   }
   const pos = engine.position();
@@ -370,9 +388,9 @@ function frame(): void {
     circle.setTrainerProgress(null);
   }
   stageView.tick(pos, { trainerText: stageTrainerText });
-  requestAnimationFrame(frame);
+  if (engine.running) requestFrameLoop();
 }
-requestAnimationFrame(frame);
+requestFrameLoop();
 
 // --- Service worker: reload the page when a new version takes control ---
 // With skipWaiting + clientsClaim the new SW activates immediately after

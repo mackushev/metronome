@@ -21,7 +21,6 @@
       "description": "One exercise: a crop of the image (whole image if bbox omitted).",
       "properties": {
         "id": { "type": "string", "description": "Defaults to <group>-<n>." },
-        "image": { "type": "string", "description": "Image filename; defaults to the group image." },
         "bbox": { "$ref": "#/$defs/bbox" },
         "title": { "type": "string" },
         "page": { "type": "string", "description": "Defaults to the group page." },

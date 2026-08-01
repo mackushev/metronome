@@ -34,8 +34,6 @@ export type Page = Topic;
 /** A single exercise: a crop of an image (or the whole image when bbox is omitted). */
 export interface ItemSpec {
   id?: string;
-  /** Image filename; defaults to the group's image. */
-  image?: string;
   bbox?: BBox;
   title?: string;
   /** Page label; defaults to the group's page. */
@@ -94,8 +92,6 @@ export interface Item {
   title?: string;
   page: string;
   topic: string;
-  /** Position in the flat ordered index. */
-  order: number;
 }
 
 /** The composed, in-memory content the UI navigates by page or by topic. */

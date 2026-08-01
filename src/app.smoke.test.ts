@@ -101,6 +101,15 @@ describe('smoke: the app mounts', () => {
     expect(document.getElementById('bpm-value')!.textContent).toBe('120');
   });
 
+  it('Space on an interactive control does not also toggle playback', () => {
+    const icon = document.querySelector('.icon-play')!;
+    const before = icon.textContent;
+    document.getElementById('t0-step-inc')!.dispatchEvent(
+      new KeyboardEvent('keydown', { code: 'Space', bubbles: true }),
+    );
+    expect(icon.textContent).toBe(before);
+  });
+
   it('beat bar: one rectangle per beat, a tap cycles its state', () => {
     const beats = document.querySelectorAll('#circle .dot-beat').length;
     let cells = document.querySelectorAll('#beat-bar .beat-cell');

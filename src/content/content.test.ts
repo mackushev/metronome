@@ -170,4 +170,17 @@ describe('published schema', () => {
     const data = JSON.parse(readFileSync(resolve(dir, '0001.json'), 'utf-8'));
     expect(validate(data)).toBe(true);
   });
+
+  it('rejects unsupported per-item image overrides', () => {
+    expect(
+      validate({
+        image: 'sheet.webp',
+        w: 100,
+        h: 100,
+        page: '1',
+        topic: 'Basics',
+        items: [{ image: 'other.webp' }],
+      }),
+    ).toBe(false);
+  });
 });

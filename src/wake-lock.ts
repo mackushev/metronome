@@ -22,23 +22,35 @@ let sentinel: WakeLockSentinelLike | null = null;
 /** True while the caller wants the lock held (drives re-acquire on visibility). */
 let wanted = false;
 let listenerBound = false;
+let acquiring = false;
 
 function supported(): boolean {
   return 'wakeLock' in navigator;
 }
 
 async function acquire(): Promise<void> {
-  if (!wanted || sentinel || document.visibilityState !== 'visible') return;
+  if (!wanted || sentinel || acquiring || document.visibilityState !== 'visible') return;
   const nav = navigator as unknown as WakeLockNavigator;
   if (!nav.wakeLock) return;
+  acquiring = true;
   try {
-    sentinel = await nav.wakeLock.request('screen');
-    sentinel.addEventListener('release', () => {
-      sentinel = null;
+    const acquired = await nav.wakeLock.request('screen');
+    // The request may resolve after the stage view was closed or the tab became
+    // hidden. releaseWakeLock() cannot release a sentinel it has not seen yet,
+    // so close this race here before publishing it as the held lock.
+    if (!wanted || document.visibilityState !== 'visible') {
+      if (!acquired.released) await acquired.release().catch(() => {});
+      return;
+    }
+    sentinel = acquired;
+    acquired.addEventListener('release', () => {
+      if (sentinel === acquired) sentinel = null;
     });
   } catch {
     // Denied (battery saver, permissions) — keep working without it.
     sentinel = null;
+  } finally {
+    acquiring = false;
   }
 }
 

@@ -50,7 +50,7 @@
         <!-- Sound + volume. Collapsed by default; state is not persisted so
              each session starts with the panel closed. -->
         <div class="control-group collapsible-panel group-sound collapsed" id="sound-panel">
-          <div class="collapsible-header" id="sound-toggle" role="button" tabindex="0">Sound</div>
+          <button class="collapsible-header" id="sound-toggle" type="button">Sound</button>
           <div class="collapsible-body">
             <!-- Sound of the main beat (metronome / exercises, and the polyrhythm base ticks) -->
             <div class="row seg" id="sound-seg"></div>
@@ -67,7 +67,7 @@
         <section class="controls">
           <!-- Collapsible Speed trainer panel -->
           <div class="control-group collapsible-panel" id="trainer-panel">
-            <div class="collapsible-header" id="trainer-toggle" role="button" tabindex="0">Speed trainer</div>
+            <button class="collapsible-header" id="trainer-toggle" type="button">Speed trainer</button>
             <div class="collapsible-body">
 
               <!-- Stage 0 -->
@@ -134,7 +134,7 @@
 
           <!-- Collapsible auto-advance panel (exercises mode only) -->
           <div class="control-group collapsible-panel" id="ex-auto-panel">
-            <div class="collapsible-header" id="ex-auto-toggle" role="button" tabindex="0">Auto-advance</div>
+            <button class="collapsible-header" id="ex-auto-toggle" type="button">Auto-advance</button>
             <div class="collapsible-body">
               <div class="trainer-row" id="ex-auto-row">
                 <span class="trainer-lbl">every</span>

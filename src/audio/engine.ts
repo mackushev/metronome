@@ -152,6 +152,7 @@ export class MetronomeEngine {
   private voiceBuffers = new Map<string, AudioBuffer>();
   private voiceLoading = false;
   private voiceLoaded = false;
+  private voiceFailed = false;
 
   // Polyrhythm scheduling state
   private polyEvents: PolyEvent[] = [];
@@ -266,7 +267,7 @@ export class MetronomeEngine {
 
   /** Load and decode the voice-count pack once; safe to call every schedule. */
   private ensureVoiceLoaded(): void {
-    if (this.voiceLoaded || this.voiceLoading || !this.ctx) return;
+    if (this.voiceLoaded || this.voiceLoading || this.voiceFailed || !this.ctx) return;
     this.voiceLoading = true;
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
     void Promise.all(
@@ -283,6 +284,7 @@ export class MetronomeEngine {
         // Missing/undecodable pack — keep clicking, never retry-storm.
         this.voiceBuffers.clear();
         this.voiceLoaded = false;
+        this.voiceFailed = true;
       })
       .finally(() => {
         this.voiceLoading = false;

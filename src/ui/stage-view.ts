@@ -122,10 +122,6 @@ export class StageView {
     });
   }
 
-  get isOpen(): boolean {
-    return this.open;
-  }
-
   show(): void {
     if (this.open) return;
     this.open = true;
