@@ -303,6 +303,7 @@ beatBar.render(store.get());
 const countNum = document.getElementById('count-num') as HTMLDivElement;
 const countWord = document.getElementById('count-word') as HTMLDivElement;
 const circleWrap = document.querySelector('.circle-wrap') as HTMLElement;
+const gapStatus = document.getElementById('gap-status') as HTMLDivElement;
 let countdownShown = false;
 let lastCountIn: number | null = null;
 function updateCenterCountdown(countIn: number | null | undefined): void {
@@ -346,6 +347,8 @@ function requestFrameLoop(): void {
 function frame(): void {
   frameRaf = null;
   if (store.get().mode === 'polyrhythm') {
+    circleWrap.classList.remove('gap-active');
+    gapStatus.hidden = true;
     circle.polyTick(engine.polyPosition());
     circle.setTrainerProgress(null);
     stageView.tick(engine.position());
@@ -356,9 +359,12 @@ function frame(): void {
   // During the count-in the beats must not run: freeze the circle and beat bar
   // so only the countdown cue moves.
   const counting = pos?.countIn != null;
-  circle.tick(counting ? null : pos);
+  const gap = Boolean(pos?.gap) && !counting;
+  circleWrap.classList.toggle('gap-active', gap);
+  gapStatus.hidden = !gap;
+  circle.tick(counting || gap ? null : pos);
   updateCenterCountdown(pos?.countIn);
-  beatBar.setActive(pos && !counting ? pos.beatIndex : null);
+  beatBar.setActive(pos && !counting && !gap ? pos.beatIndex : null);
 
   // A sticky "audio blocked" notice disappears as soon as audio actually plays
   if (noticeSticky && !audioNotice.hidden && engine.audioRunning()) {

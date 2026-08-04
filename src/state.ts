@@ -47,6 +47,14 @@ export interface TrainerSettings {
   stages: TrainerStage[];
 }
 
+export interface GapClickSettings {
+  enabled: boolean;
+  /** Audible measures at the start of each cycle. */
+  clickBars: number;
+  /** Silent measures at the end of each cycle. */
+  gapBars: number;
+}
+
 export interface ExerciseState {
   /** Currently shown item id; null until content loads / first selection. */
   currentId: string | null;
@@ -83,6 +91,7 @@ export interface Settings {
   /** State of each beat in the measure, length = beats */
   beatStates: BeatState[];
   trainer: TrainerSettings;
+  gapClick: GapClickSettings;
   exercise: ExerciseState;
   polyrhythm: PolyrhythmSettings;
 }
@@ -177,6 +186,8 @@ export function defaultVoices(): PolyVoice[] {
 }
 
 export const DEFAULT_STAGE: TrainerStage = { deltaSec: 30, stepBpm: 5, maxBpm: null };
+export const GAP_BARS_MIN = 1;
+export const GAP_BARS_MAX = 16;
 
 export function defaultSettings(): Settings {
   return {
@@ -192,6 +203,7 @@ export function defaultSettings(): Settings {
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
+    gapClick: { enabled: false, clickBars: 1, gapBars: 1 },
     exercise: { currentId: null, pages: [], topic: '', random: false, autoSec: 0 },
     polyrhythm: { voices: defaultVoices() },
   };
@@ -250,6 +262,23 @@ function parseTrainerStage(raw: unknown): TrainerStage {
     deltaSec: Math.max(2, Number(s?.deltaSec) || DEFAULT_STAGE.deltaSec),
     stepBpm: Math.max(1, Number(s?.stepBpm) || DEFAULT_STAGE.stepBpm),
     maxBpm: s?.maxBpm != null && s.maxBpm !== '' ? clampBpm(Number(s.maxBpm)) : null,
+  };
+}
+
+function parseGapBars(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n)
+    ? Math.min(GAP_BARS_MAX, Math.max(GAP_BARS_MIN, Math.round(n)))
+    : fallback;
+}
+
+function parseGapClick(raw: unknown, fallback: GapClickSettings): GapClickSettings {
+  const gap = raw as Record<string, unknown> | undefined;
+  if (!gap) return fallback;
+  return {
+    enabled: typeof gap.enabled === 'boolean' ? gap.enabled : fallback.enabled,
+    clickBars: parseGapBars(gap.clickBars, fallback.clickBars),
+    gapBars: parseGapBars(gap.gapBars, fallback.gapBars),
   };
 }
 
@@ -317,6 +346,7 @@ export function loadSettings(): Settings {
         beats,
       ),
       trainer,
+      gapClick: parseGapClick(parsed.gapClick, fallback.gapClick),
       exercise,
       polyrhythm: parsePolyrhythm(parsed.polyrhythm, fallback.polyrhythm),
     };

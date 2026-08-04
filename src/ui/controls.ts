@@ -2,6 +2,8 @@ import {
   BPM_MIN,
   BPM_MAX,
   DEFAULT_STAGE,
+  GAP_BARS_MAX,
+  GAP_BARS_MIN,
   POLY_PULSES_MIN,
   POLY_PULSES_MAX,
   SOUNDS,
@@ -277,6 +279,44 @@ function bindTrainer(store: Store): void {
   syncTrainer(store.get());
 }
 
+/** Bind the alternating audible/silent measure cycle. */
+function bindGapClick(store: Store): void {
+  const panel = byId<HTMLDivElement>('gap-panel');
+  const toggle = byId<HTMLButtonElement>('gap-toggle');
+  const clampBars = (value: number): number =>
+    Math.min(GAP_BARS_MAX, Math.max(GAP_BARS_MIN, Math.round(value)));
+  const update = (patch: Partial<ReturnType<Store['get']>['gapClick']>): void => {
+    store.update({ gapClick: { ...store.get().gapClick, ...patch } });
+  };
+
+  toggle.addEventListener('click', () => update({ enabled: !store.get().gapClick.enabled }));
+
+  const bindBars = (kind: 'click' | 'gap'): void => {
+    const field = kind === 'click' ? 'clickBars' : 'gapBars';
+    const row = byId(`${kind === 'click' ? 'gap-click' : 'gap-bars'}-row`);
+    const dec = byId<HTMLButtonElement>(`${kind === 'click' ? 'gap-click' : 'gap-bars'}-dec`);
+    const inc = byId<HTMLButtonElement>(`${kind === 'click' ? 'gap-click' : 'gap-bars'}-inc`);
+    const get = () => store.get().gapClick[field];
+    dec.addEventListener('click', () => update({ [field]: clampBars(get() - 1) }));
+    inc.addEventListener('click', () => update({ [field]: clampBars(get() + 1) }));
+    bindWheel(row, 1, get, (value) => update({ [field]: value }), GAP_BARS_MIN, GAP_BARS_MAX);
+  };
+
+  bindBars('click');
+  bindBars('gap');
+
+  const sync = (s: ReturnType<Store['get']>): void => {
+    const gap = s.gapClick;
+    panel.classList.toggle('collapsed', !gap.enabled);
+    byId('gap-click-num').textContent = String(gap.clickBars);
+    byId('gap-bars-num').textContent = String(gap.gapBars);
+    byId('gap-click-unit').textContent = gap.clickBars === 1 ? 'bar' : 'bars';
+    byId('gap-bars-unit').textContent = gap.gapBars === 1 ? 'bar' : 'bars';
+  };
+  store.subscribe(sync);
+  sync(store.get());
+}
+
 /** Build a row of sound buttons that update a specific field via onSelect */
 function buildSoundButtons(
   container: HTMLElement,
@@ -503,6 +543,9 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
 
   // --- Speed trainer ---
   bindTrainer(store);
+
+  // --- Gap Click ---
+  bindGapClick(store);
 
   // --- Settings popup in the top bar ---
   const settingsMenu = byId<HTMLDivElement>('settings-menu');

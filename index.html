@@ -76,6 +76,7 @@
       <main class="layout">
         <section class="circle-col">
           <div class="circle-wrap">
+          <img class="gap-face" src="%BASE_URL%gap-face.webp" alt="" aria-hidden="true" />
           <svg id="circle" viewBox="0 0 360 360" aria-hidden="true"></svg>
           <div class="center" id="center">
             <div class="bpm-value" id="bpm-value">120</div>
@@ -98,7 +99,13 @@
             </svg>
           </button>
           </div>
-          <div class="beat-bar" id="beat-bar" aria-label="Beats of the measure"></div>
+          <div class="circle-readout">
+            <div class="beat-bar" id="beat-bar" aria-label="Beats of the measure"></div>
+            <div class="gap-status" id="gap-status" role="status" hidden>
+              <span class="gap-status-badge">Gap</span>
+              <span class="gap-status-question">Are you in my tempo?</span>
+            </div>
+          </div>
           <div class="audio-notice" id="audio-notice" hidden>
             <span id="audio-notice-text"></span>
             <button class="audio-notice-close" id="audio-notice-close" aria-label="Dismiss">✕</button>
@@ -171,6 +178,31 @@
                 </div>
               </div>
 
+            </div>
+          </div>
+
+          <!-- Gap Click: alternating audible and silent measures (metronome only) -->
+          <div class="control-group collapsible-panel gap-panel" id="gap-panel">
+            <button class="collapsible-header" id="gap-toggle" type="button">Gap click</button>
+            <div class="collapsible-body">
+              <div class="gap-sequence" aria-label="Gap Click cycle">
+                <div class="trainer-row gap-row" id="gap-click-row">
+                  <span class="trainer-lbl gap-phase-click">click</span>
+                  <button class="btn trainer-btn" id="gap-click-dec" type="button" aria-label="Fewer click bars">−</button>
+                  <span class="trainer-num" id="gap-click-num">1</span>
+                  <span class="trainer-unit" id="gap-click-unit">bar</span>
+                  <button class="btn trainer-btn" id="gap-click-inc" type="button" aria-label="More click bars">+</button>
+                </div>
+                <div class="gap-then">↓ then</div>
+                <div class="trainer-row gap-row" id="gap-bars-row">
+                  <span class="trainer-lbl gap-phase-gap">gap</span>
+                  <button class="btn trainer-btn" id="gap-bars-dec" type="button" aria-label="Fewer gap bars">−</button>
+                  <span class="trainer-num" id="gap-bars-num">1</span>
+                  <span class="trainer-unit" id="gap-bars-unit">bar</span>
+                  <button class="btn trainer-btn" id="gap-bars-inc" type="button" aria-label="More gap bars">+</button>
+                </div>
+              </div>
+              <p class="gap-help">Sound and beat flashes disappear during the gap.</p>
             </div>
           </div>
 

@@ -37,7 +37,7 @@ export default defineConfig(({ command }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       workbox: {
-        globPatterns: ['**/*.{js,wasm,css,html,woff2}'],
+        globPatterns: ['**/*.{js,wasm,css,html,woff2,webp}'],
         // Ensure the new service worker takes over immediately after install,
         // so users never run stale JS/CSS from a previous deployment.
         skipWaiting: true,

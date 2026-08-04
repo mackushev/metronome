@@ -79,6 +79,37 @@ describe('smoke: the app mounts', () => {
     expect(panel.classList.contains('collapsed')).toBe(true);
   });
 
+  it('Gap Click is a separate collapsible panel with independent bar counts', () => {
+    const toggle = document.getElementById('gap-toggle') as HTMLButtonElement;
+    const panel = document.getElementById('gap-panel') as HTMLDivElement;
+    expect(panel.classList.contains('collapsed')).toBe(true);
+    expect(document.getElementById('gap-click-num')!.textContent).toBe('1');
+    expect(document.getElementById('gap-bars-num')!.textContent).toBe('1');
+
+    toggle.click();
+    expect(panel.classList.contains('collapsed')).toBe(false);
+    (document.getElementById('gap-click-inc') as HTMLButtonElement).click();
+    (document.getElementById('gap-bars-inc') as HTMLButtonElement).click();
+    expect(document.getElementById('gap-click-num')!.textContent).toBe('2');
+    expect(document.getElementById('gap-bars-num')!.textContent).toBe('2');
+
+    // Speed Trainer remains independently controllable while Gap Click is on.
+    const trainerToggle = document.getElementById('trainer-toggle') as HTMLButtonElement;
+    trainerToggle.click();
+    expect(panel.classList.contains('collapsed')).toBe(false);
+    expect(document.getElementById('trainer-panel')!.classList.contains('collapsed')).toBe(false);
+    trainerToggle.click();
+    toggle.click();
+  });
+
+  it('has a hidden, non-rhythmic challenge cue for Gap Click playback', () => {
+    const status = document.getElementById('gap-status') as HTMLDivElement;
+    expect(status.hidden).toBe(true);
+    expect(status.textContent).toContain('Gap');
+    expect(status.textContent).toContain('Are you in my tempo?');
+    expect((document.querySelector('.gap-face') as HTMLImageElement).src).toContain('gap-face.webp');
+  });
+
   it('theme cards show visual choices and apply the selected theme', () => {
     const cards = document.querySelectorAll<HTMLButtonElement>('#theme-picker .theme-card');
     expect(cards.length).toBe(2);

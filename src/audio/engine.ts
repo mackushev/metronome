@@ -1,9 +1,12 @@
 import { CLICK_VOLUME_FACTOR, isSubMuted, type Settings, type SoundName } from '../state';
+import { isGapMeasure } from '../gap-click';
 import { scheduleSound, type TickKind } from './sounds';
 
 export interface Position {
   beatIndex: number;
   subIndex: number;
+  /** This tick belongs to a silent Gap Click measure. */
+  gap?: boolean;
 }
 
 /**
@@ -142,6 +145,12 @@ export class MetronomeEngine {
   private pos: Position = { beatIndex: 0, subIndex: 0 };
   private scheduled: ScheduledTick[] = [];
 
+  // Gap Click is evaluated once per measure, so toggling/changing it cannot
+  // cut a bar in half. The cycle always begins with measure 0 (audible).
+  private gapMeasureIndex = 0;
+  private gapMeasureMuted = false;
+  private gapWasEnabled = false;
+
   // Count-in: whole beats still to play before real measure 0 begins, and the
   // total we started with (so we can derive the swept beat index for the UI).
   private countInRemaining = 0;
@@ -213,6 +222,9 @@ export class MetronomeEngine {
     if (!ctx) return;
     this.pos = { beatIndex: 0, subIndex: 0 };
     this.scheduled = [];
+    this.gapMeasureIndex = 0;
+    this.gapMeasureMuted = false;
+    this.gapWasEnabled = false;
     // A one-bar count-in precedes real playback in the modes where it helps you
     // get ready: exercises, and the metronome while the speed trainer is on.
     // Plain metronome and polyrhythm start immediately.
@@ -321,6 +333,7 @@ export class MetronomeEngine {
       subIndex: current.subIndex,
       fraction,
       countIn: current.countIn,
+      gap: current.gap,
     };
   }
 
@@ -389,6 +402,16 @@ export class MetronomeEngine {
       if (this.pos.subIndex >= s.subdivision) this.pos = { ...this.pos, subIndex: 0 };
 
       if (this.pos.subIndex === 0) {
+        if (this.pos.beatIndex === 0) {
+          if (s.mode === 'metronome' && s.gapClick.enabled) {
+            if (!this.gapWasEnabled) this.gapMeasureIndex = 0;
+            this.gapMeasureMuted = isGapMeasure(this.gapMeasureIndex, s.gapClick);
+            this.gapWasEnabled = true;
+          } else {
+            this.gapMeasureMuted = false;
+            this.gapWasEnabled = false;
+          }
+        }
         this.onBeatScheduled?.(this.nextTime, this.pos.beatIndex);
       }
       // The trainer may have just changed the BPM — read the interval after the callback
@@ -396,7 +419,7 @@ export class MetronomeEngine {
       const kind = tickKind(this.getSettings(), this.pos);
       this.master!.gain.value = s.volume;
       if (s.voiceCount) this.ensureVoiceLoaded();
-      if (kind !== 'silent') {
+      if (kind !== 'silent' && !this.gapMeasureMuted) {
         // Speak the count where a syllable exists and the pack is ready;
         // otherwise (or on subdivisions 5..8) fall back to the click.
         const word = s.voiceCount ? countSyllable(s.subdivision, this.pos.beatIndex, this.pos.subIndex) : null;
@@ -411,8 +434,16 @@ export class MetronomeEngine {
         }
       }
 
-      this.scheduled.push({ ...this.pos, time: this.nextTime, intervalSec: interval });
+      this.scheduled.push({
+        ...this.pos,
+        time: this.nextTime,
+        intervalSec: interval,
+        gap: this.gapMeasureMuted,
+      });
       this.pos = advance(this.pos, s.beats, s.subdivision);
+      if (this.pos.beatIndex === 0 && this.pos.subIndex === 0 && this.gapWasEnabled) {
+        this.gapMeasureIndex += 1;
+      }
       this.nextTime += interval;
     }
     // Trim ticks that have already sounded so the queue does not grow

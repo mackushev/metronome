@@ -8,6 +8,7 @@ export interface StagePosition {
   subIndex: number;
   fraction: number;
   countIn?: number;
+  gap?: boolean;
 }
 
 /** Per-frame context the main loop feeds the stage overlay. */
@@ -28,6 +29,7 @@ export class StageView {
   private readonly root: HTMLDivElement;
   private readonly numberEl: HTMLDivElement;
   private readonly dotsEl: HTMLDivElement;
+  private readonly gapCue: HTMLDivElement;
   private dots: HTMLDivElement[] = [];
 
   // Bottom info strip: speed-trainer status and the exercise panel.
@@ -66,7 +68,16 @@ export class StageView {
     this.dotsEl = document.createElement('div');
     this.dotsEl.className = 'stage-dots';
 
-    inner.append(this.numberEl, this.dotsEl);
+    this.gapCue = document.createElement('div');
+    this.gapCue.className = 'stage-gap';
+    this.gapCue.style.display = 'none';
+    const gapBadge = document.createElement('strong');
+    gapBadge.textContent = 'Gap';
+    const gapQuestion = document.createElement('span');
+    gapQuestion.textContent = 'Are you in my tempo?';
+    this.gapCue.append(gapBadge, gapQuestion);
+
+    inner.append(this.numberEl, this.dotsEl, this.gapCue);
 
     // --- Bottom info strip ---
     const info = document.createElement('div');
@@ -130,7 +141,10 @@ export class StageView {
     this.buildDots();
     // Resting display until the first beat arrives.
     this.numberEl.textContent = '1';
+    this.numberEl.style.display = '';
     this.numberEl.classList.remove('accent', 'counting');
+    this.dotsEl.style.display = '';
+    this.gapCue.style.display = 'none';
     this.setActive(-1);
     this.root.classList.add('open');
     requestWakeLock();
@@ -154,6 +168,26 @@ export class StageView {
     // Stopped: freeze on the last beat shown so stopping never bumps the count
     // (the resting "1" is set once in show(), before the first beat).
     if (!pos) return;
+
+    // Gap Click intentionally removes every timing cue, including the giant
+    // count, beat dots and screen flash. Keep the trainer status available.
+    if (pos.gap) {
+      if (this.shownKey !== 'gap') {
+        this.shownKey = 'gap';
+        this.numberEl.textContent = '';
+        this.numberEl.classList.remove('accent', 'counting');
+        this.numberEl.style.display = 'none';
+        this.dotsEl.style.display = 'none';
+        this.gapCue.style.display = '';
+        this.setActive(-1);
+        this.root.classList.remove('flash', 'flash-accent');
+      }
+      return;
+    }
+
+    this.numberEl.style.display = '';
+    this.dotsEl.style.display = '';
+    this.gapCue.style.display = 'none';
 
     const counting = pos.countIn != null;
     const key = counting ? `c${pos.countIn}` : `b${pos.beatIndex}`;

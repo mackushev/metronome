@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   advance,
   countSyllable,
+  MetronomeEngine,
   polyEventsForCycle,
   tickKind,
   voiceTooFast,
@@ -16,6 +17,7 @@ import {
   type Settings,
 } from './state';
 import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
+import { gapClickPhase, isGapMeasure } from './gap-click';
 import { normalizeDeltaDeg } from './ui/circle';
 
 describe('countSyllable: spoken counting', () => {
@@ -79,6 +81,49 @@ describe('advance: tick grid', () => {
   it('steps beat by beat when there are no subdivisions', () => {
     expect(advance({ beatIndex: 0, subIndex: 0 }, 2, 1)).toEqual({ beatIndex: 1, subIndex: 0 });
     expect(advance({ beatIndex: 1, subIndex: 0 }, 2, 1)).toEqual({ beatIndex: 0, subIndex: 0 });
+  });
+});
+
+describe('Gap Click measure cycle', () => {
+  it('starts with audible bars, then repeats silent bars', () => {
+    const settings = { clickBars: 2, gapBars: 1 };
+    expect([0, 1, 2, 3, 4, 5].map((bar) => gapClickPhase(bar, settings))).toEqual([
+      'click',
+      'click',
+      'gap',
+      'click',
+      'click',
+      'gap',
+    ]);
+  });
+
+  it('supports a gap longer than the audible section', () => {
+    const settings = { clickBars: 1, gapBars: 3 };
+    expect([0, 1, 2, 3, 4].map((bar) => isGapMeasure(bar, settings))).toEqual([
+      false,
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('passes the gap marker through the engine position read-out for the UI', () => {
+    const engine = new MetronomeEngine(defaultSettings);
+    Object.assign(engine as unknown as Record<string, unknown>, {
+      ctx: { currentTime: 10.25 },
+      timer: 1,
+      scheduled: [
+        { beatIndex: 0, subIndex: 0, time: 10, intervalSec: 0.5, gap: true },
+      ],
+    });
+
+    expect(engine.position()).toMatchObject({
+      beatIndex: 0,
+      subIndex: 0,
+      fraction: 0.5,
+      gap: true,
+    });
   });
 });
 
