@@ -49,9 +49,11 @@ export interface TrainerSettings {
 
 export interface GapClickSettings {
   enabled: boolean;
-  /** Audible measures at the start of each cycle. */
+  /** Place the silent run at a random position within each cycle. */
+  random: boolean;
+  /** Number of audible measures in each cycle. */
   clickBars: number;
-  /** Silent measures at the end of each cycle. */
+  /** Number of consecutive silent measures in each cycle. */
   gapBars: number;
 }
 
@@ -203,7 +205,7 @@ export function defaultSettings(): Settings {
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
-    gapClick: { enabled: false, clickBars: 1, gapBars: 1 },
+    gapClick: { enabled: false, random: false, clickBars: 1, gapBars: 1 },
     exercise: { currentId: null, pages: [], topic: '', random: false, autoSec: 0 },
     polyrhythm: { voices: defaultVoices() },
   };
@@ -277,6 +279,7 @@ function parseGapClick(raw: unknown, fallback: GapClickSettings): GapClickSettin
   if (!gap) return fallback;
   return {
     enabled: typeof gap.enabled === 'boolean' ? gap.enabled : fallback.enabled,
+    random: typeof gap.random === 'boolean' ? gap.random : fallback.random,
     clickBars: parseGapBars(gap.clickBars, fallback.clickBars),
     gapBars: parseGapBars(gap.gapBars, fallback.gapBars),
   };

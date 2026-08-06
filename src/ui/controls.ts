@@ -283,6 +283,7 @@ function bindTrainer(store: Store): void {
 function bindGapClick(store: Store): void {
   const panel = byId<HTMLDivElement>('gap-panel');
   const toggle = byId<HTMLButtonElement>('gap-toggle');
+  const random = byId<HTMLInputElement>('gap-random');
   const clampBars = (value: number): number =>
     Math.min(GAP_BARS_MAX, Math.max(GAP_BARS_MIN, Math.round(value)));
   const update = (patch: Partial<ReturnType<Store['get']>['gapClick']>): void => {
@@ -290,6 +291,7 @@ function bindGapClick(store: Store): void {
   };
 
   toggle.addEventListener('click', () => update({ enabled: !store.get().gapClick.enabled }));
+  random.addEventListener('change', () => update({ random: random.checked }));
 
   const bindBars = (kind: 'click' | 'gap'): void => {
     const field = kind === 'click' ? 'clickBars' : 'gapBars';
@@ -308,6 +310,8 @@ function bindGapClick(store: Store): void {
   const sync = (s: ReturnType<Store['get']>): void => {
     const gap = s.gapClick;
     panel.classList.toggle('collapsed', !gap.enabled);
+    random.checked = gap.random;
+    byId('gap-then').textContent = gap.random ? '↕ random position' : '↓ then';
     byId('gap-click-num').textContent = String(gap.clickBars);
     byId('gap-bars-num').textContent = String(gap.gapBars);
     byId('gap-click-unit').textContent = gap.clickBars === 1 ? 'bar' : 'bars';

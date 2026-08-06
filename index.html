@@ -183,7 +183,13 @@
 
           <!-- Gap Click: alternating audible and silent measures (metronome only) -->
           <div class="control-group collapsible-panel gap-panel" id="gap-panel">
-            <button class="collapsible-header" id="gap-toggle" type="button">Gap click</button>
+            <div class="collapsible-title-row gap-header">
+              <button class="collapsible-header" id="gap-toggle" type="button">Gap click</button>
+              <label class="toggle gap-random-toggle">
+                <input type="checkbox" id="gap-random" />
+                <span>Random</span>
+              </label>
+            </div>
             <div class="collapsible-body">
               <div class="gap-sequence" aria-label="Gap Click cycle">
                 <div class="trainer-row gap-row" id="gap-click-row">
@@ -193,7 +199,7 @@
                   <span class="trainer-unit" id="gap-click-unit">bar</span>
                   <button class="btn trainer-btn" id="gap-click-inc" type="button" aria-label="More click bars">+</button>
                 </div>
-                <div class="gap-then">↓ then</div>
+                <div class="gap-then" id="gap-then">↓ then</div>
                 <div class="trainer-row gap-row" id="gap-bars-row">
                   <span class="trainer-lbl gap-phase-gap">gap</span>
                   <button class="btn trainer-btn" id="gap-bars-dec" type="button" aria-label="Fewer gap bars">−</button>
@@ -202,13 +208,19 @@
                   <button class="btn trainer-btn" id="gap-bars-inc" type="button" aria-label="More gap bars">+</button>
                 </div>
               </div>
-              <p class="gap-help">Sound and beat flashes disappear during the gap.</p>
+              <p class="gap-help">The first gap beat sounds; everything after it disappears.</p>
             </div>
           </div>
 
           <!-- Collapsible auto-advance panel (exercises mode only) -->
           <div class="control-group collapsible-panel" id="ex-auto-panel">
-            <button class="collapsible-header" id="ex-auto-toggle" type="button">Auto-advance</button>
+            <div class="collapsible-title-row">
+              <button class="collapsible-header" id="ex-auto-toggle" type="button">Auto-advance</button>
+              <label class="toggle ex-random-toggle">
+                <input type="checkbox" id="ex-random" />
+                <span>Random</span>
+              </label>
+            </div>
             <div class="collapsible-body">
               <div class="trainer-row" id="ex-auto-row">
                 <span class="trainer-lbl">every</span>
@@ -221,10 +233,6 @@
               <div class="ex-preview" id="ex-preview" hidden>
                 <div class="ex-preview-head">
                   <div class="ex-preview-label" id="ex-preview-label">Next</div>
-                  <label class="toggle ex-random-toggle">
-                    <input type="checkbox" id="ex-random" />
-                    <span>Random</span>
-                  </label>
                 </div>
                 <div class="ex-preview-viewport" id="ex-preview-viewport">
                   <img id="ex-preview-img" alt="Next exercise" />

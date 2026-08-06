@@ -17,7 +17,7 @@ import {
   type Settings,
 } from './state';
 import { secondsToNextStep, trainerAtMax, trainerProgress, trainerTargetBpm } from './trainer';
-import { gapClickPhase, isGapMeasure } from './gap-click';
+import { gapClickPhase, isGapEntryTick, isGapMeasure, randomGapStart } from './gap-click';
 import { normalizeDeltaDeg } from './ui/circle';
 
 describe('countSyllable: spoken counting', () => {
@@ -106,6 +106,38 @@ describe('Gap Click measure cycle', () => {
       true,
       false,
     ]);
+  });
+
+  it('places one complete gap at a random position inside each cycle', () => {
+    const settings = { clickBars: 3, gapBars: 2 };
+    const start = randomGapStart(settings, () => 0.5);
+    expect(start).toBe(2);
+    expect([0, 1, 2, 3, 4].map((bar) => isGapMeasure(bar, settings, start))).toEqual([
+      false,
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('allows a random gap at either edge of the cycle', () => {
+    const settings = { clickBars: 2, gapBars: 1 };
+    expect(randomGapStart(settings, () => 0)).toBe(0);
+    expect(randomGapStart(settings, () => 1)).toBe(2);
+  });
+
+  it('can require an audible bar after a gap that ended at a cycle boundary', () => {
+    const settings = { clickBars: 2, gapBars: 1 };
+    expect(randomGapStart(settings, () => 0, 1)).toBe(1);
+  });
+
+  it('lets only the first beat that begins a gap sound', () => {
+    expect(isGapEntryTick(true, true, 0, 0)).toBe(true);
+    expect(isGapEntryTick(true, true, 0, 1)).toBe(false);
+    expect(isGapEntryTick(true, true, 1, 0)).toBe(false);
+    expect(isGapEntryTick(true, false, 0, 0)).toBe(false);
+    expect(isGapEntryTick(false, true, 0, 0)).toBe(false);
   });
 
   it('passes the gap marker through the engine position read-out for the UI', () => {

@@ -1,5 +1,5 @@
 import { CLICK_VOLUME_FACTOR, isSubMuted, type Settings, type SoundName } from '../state';
-import { isGapMeasure } from '../gap-click';
+import { isGapEntryTick, isGapMeasure, randomGapStart } from '../gap-click';
 import { scheduleSound, type TickKind } from './sounds';
 
 export interface Position {
@@ -146,10 +146,13 @@ export class MetronomeEngine {
   private scheduled: ScheduledTick[] = [];
 
   // Gap Click is evaluated once per measure, so toggling/changing it cannot
-  // cut a bar in half. The cycle always begins with measure 0 (audible).
+  // cut a bar in half. A newly enabled cycle always begins at measure 0.
   private gapMeasureIndex = 0;
   private gapMeasureMuted = false;
+  private gapEntryMeasure = false;
   private gapWasEnabled = false;
+  private gapRandomStart: number | undefined;
+  private gapRandomEndedCycle = false;
 
   // Count-in: whole beats still to play before real measure 0 begins, and the
   // total we started with (so we can derive the swept beat index for the UI).
@@ -224,7 +227,10 @@ export class MetronomeEngine {
     this.scheduled = [];
     this.gapMeasureIndex = 0;
     this.gapMeasureMuted = false;
+    this.gapEntryMeasure = false;
     this.gapWasEnabled = false;
+    this.gapRandomStart = undefined;
+    this.gapRandomEndedCycle = false;
     // A one-bar count-in precedes real playback in the modes where it helps you
     // get ready: exercises, and the metronome while the speed trainer is on.
     // Plain metronome and polyrhythm start immediately.
@@ -404,12 +410,36 @@ export class MetronomeEngine {
       if (this.pos.subIndex === 0) {
         if (this.pos.beatIndex === 0) {
           if (s.mode === 'metronome' && s.gapClick.enabled) {
-            if (!this.gapWasEnabled) this.gapMeasureIndex = 0;
-            this.gapMeasureMuted = isGapMeasure(this.gapMeasureIndex, s.gapClick);
+            const previousMeasureWasGap = this.gapMeasureMuted;
+            if (!this.gapWasEnabled) {
+              this.gapMeasureIndex = 0;
+              this.gapRandomStart = undefined;
+              this.gapRandomEndedCycle = false;
+            }
+            const cycleBars = s.gapClick.clickBars + s.gapClick.gapBars;
+            if (s.gapClick.random && this.gapMeasureIndex % cycleBars === 0) {
+              // Keep separate random gaps from merging across a cycle boundary:
+              // every silent run must remain exactly `gapBars` measures long.
+              this.gapRandomStart = randomGapStart(
+                s.gapClick,
+                Math.random,
+                this.gapRandomEndedCycle ? 1 : 0,
+              );
+              this.gapRandomEndedCycle = this.gapRandomStart === s.gapClick.clickBars;
+            }
+            this.gapMeasureMuted = isGapMeasure(
+              this.gapMeasureIndex,
+              s.gapClick,
+              s.gapClick.random ? this.gapRandomStart : undefined,
+            );
+            this.gapEntryMeasure = this.gapMeasureMuted && !previousMeasureWasGap;
             this.gapWasEnabled = true;
           } else {
             this.gapMeasureMuted = false;
+            this.gapEntryMeasure = false;
             this.gapWasEnabled = false;
+            this.gapRandomStart = undefined;
+            this.gapRandomEndedCycle = false;
           }
         }
         this.onBeatScheduled?.(this.nextTime, this.pos.beatIndex);
@@ -419,7 +449,13 @@ export class MetronomeEngine {
       const kind = tickKind(this.getSettings(), this.pos);
       this.master!.gain.value = s.volume;
       if (s.voiceCount) this.ensureVoiceLoaded();
-      if (kind !== 'silent' && !this.gapMeasureMuted) {
+      const gapEntryTick = isGapEntryTick(
+        this.gapMeasureMuted,
+        this.gapEntryMeasure,
+        this.pos.beatIndex,
+        this.pos.subIndex,
+      );
+      if (kind !== 'silent' && (!this.gapMeasureMuted || gapEntryTick)) {
         // Speak the count where a syllable exists and the pack is ready;
         // otherwise (or on subdivisions 5..8) fall back to the click.
         const word = s.voiceCount ? countSyllable(s.subdivision, this.pos.beatIndex, this.pos.subIndex) : null;

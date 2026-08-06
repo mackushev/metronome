@@ -85,6 +85,9 @@ describe('smoke: the app mounts', () => {
     expect(panel.classList.contains('collapsed')).toBe(true);
     expect(document.getElementById('gap-click-num')!.textContent).toBe('1');
     expect(document.getElementById('gap-bars-num')!.textContent).toBe('1');
+    const random = document.getElementById('gap-random') as HTMLInputElement;
+    expect(random.checked).toBe(false);
+    expect(random.closest('.gap-header')).not.toBeNull();
 
     toggle.click();
     expect(panel.classList.contains('collapsed')).toBe(false);
@@ -92,6 +95,10 @@ describe('smoke: the app mounts', () => {
     (document.getElementById('gap-bars-inc') as HTMLButtonElement).click();
     expect(document.getElementById('gap-click-num')!.textContent).toBe('2');
     expect(document.getElementById('gap-bars-num')!.textContent).toBe('2');
+    random.checked = true;
+    random.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(random.checked).toBe(true);
+    expect(document.getElementById('gap-then')!.textContent).toContain('random');
 
     // Speed Trainer remains independently controllable while Gap Click is on.
     const trainerToggle = document.getElementById('trainer-toggle') as HTMLButtonElement;

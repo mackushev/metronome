@@ -144,6 +144,7 @@ describe('ExerciseView (jsdom integration)', () => {
   it('the Random toggle is stored', async () => {
     const { store } = await mount();
     const random = document.getElementById('ex-random') as HTMLInputElement;
+    expect(random.closest('.collapsible-title-row')).not.toBeNull();
     random.checked = true;
     random.dispatchEvent(new Event('change', { bubbles: true }));
     expect(store.get().exercise.random).toBe(true);

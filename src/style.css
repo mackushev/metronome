@@ -1033,6 +1033,36 @@ body {
   flex-direction: column;
 }
 
+.collapsible-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.collapsible-title-row .collapsible-header {
+  flex: 1;
+  width: auto;
+}
+
+.gap-random-toggle {
+  flex: none;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--dim);
+}
+
+.gap-panel.collapsed .gap-random-toggle {
+  display: none;
+}
+
+.gap-random-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--warn);
+}
+
 .gap-row {
   margin-bottom: 0;
 }
@@ -1649,8 +1679,16 @@ body {
 }
 
 .ex-random-toggle {
-  font-size: 13px;
+  flex: none;
+  font-size: 11px;
   gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--dim);
+}
+
+#ex-auto-panel.collapsed .ex-random-toggle {
+  display: none;
 }
 
 .ex-random-toggle input {
