@@ -431,6 +431,18 @@ body {
   fill: var(--dim);
 }
 
+/* Subdivision clicks form a softly flowing highlight inside the current beat.
+   This layer is intentionally much quieter than the main beat sector. */
+.click-subsector {
+  fill: var(--active);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.click-subsector.muted {
+  opacity: 0 !important;
+}
+
 /* --- Audio problem notice (mobile autoplay, iOS mute switch, no Web Audio) --- */
 
 /* display:flex would override the hidden attribute — keep it hidden explicitly */
@@ -701,6 +713,10 @@ body {
 
 .dot.active {
   fill: var(--active);
+  /* The beat must land visually with the audio. Attack immediately; when the
+     class is removed, the base .dot transition still gives the old dot a
+     short, soft release. */
+  transition-duration: 0s;
 }
 
 .dot-beat.mute.active {

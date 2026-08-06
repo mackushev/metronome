@@ -27,6 +27,11 @@ const SECTOR_LEAD_EXP = 14;
 /** On the beat itself the current sector briefly overshoots peak opacity, then
     decays back to peak within ~1/SECTOR_FLASH_DECAY of the beat span. */
 const SECTOR_FLASH_DECAY = 6;
+/** Subdivision clicks get a quiet highlight that flows across the beat. */
+const CLICK_SUBSECTOR_MAX_OPACITY = 0.2;
+const CLICK_SUBSECTOR_GAP_DEG = 1;
+/** Faster click streams read as flicker rather than motion, so hide the flow. */
+const CLICK_SUBSECTOR_MIN_INTERVAL_SEC = 0.15;
 const TRAINER_RING_R = 152;
 const DIAL_R = 100;
 /** Tempo dial sensitivity: degrees of rotation per 1 BPM (full turn = 60 BPM) */
@@ -105,11 +110,17 @@ function arcPath(r: number, fromDeg: number, toDeg: number): string {
 /** Wedge whose *leading* (left) edge sits on beat `index` of `beats` and which
     spans forward to the next beat, from rInner to rOuter. When rInner is 0 it is
     a full pie slice radiating from the centre. */
-function sectorPath(index: number, beats: number, rInner: number, rOuter: number): string {
+function sectorPath(
+  index: number,
+  beats: number,
+  rInner: number,
+  rOuter: number,
+  gapDeg = SECTOR_GAP_DEG,
+): string {
   const start = (index / beats) * 360 - 90;
   const span = 360 / beats;
-  const a0 = start + SECTOR_GAP_DEG / 2;
-  const a1 = start + span - SECTOR_GAP_DEG / 2;
+  const a0 = start + gapDeg / 2;
+  const a1 = start + span - gapDeg / 2;
   const large = a1 - a0 > 180 ? 1 : 0;
   const o0 = polar(rOuter, a0);
   const o1 = polar(rOuter, a1);
@@ -162,6 +173,9 @@ export class CircleView {
   private dots: SVGCircleElement[] = [];
   /** One filled wedge per beat, lit with lead-ahead to anticipate the click */
   private sectors: SVGPathElement[] = [];
+  /** Quiet wedges for subdivision clicks; main beats use the full beat sector. */
+  private clickSubsectors: (SVGPathElement | null)[] = [];
+  private clickSubsectorsEnabled = false;
   private needle: SVGLineElement;
   private trainerRing: SVGCircleElement;
   private trainerRingLen: number;
@@ -469,7 +483,7 @@ export class CircleView {
 
   /** Rebuilds the dots to match the current settings (call on every change) */
   render(settings: Settings): void {
-    const { beats, subdivision, beatStates, mutedSubs } = settings;
+    const { beats, subdivision, beatStates, mutedSubs, bpm } = settings;
     if (this.polyMode) {
       // Leaving polyrhythm mode: force a full metronome rebuild
       this.polyMode = false;
@@ -495,6 +509,17 @@ export class CircleView {
       const kind = state === 'accent' ? ' accent' : state === 'mute' ? ' mute' : '';
       sector.setAttribute('class', `sector${kind}`);
     });
+    this.clickSubsectors.forEach((sector, i) => {
+      if (!sector) return;
+      const beatIndex = Math.floor(i / subdivision);
+      const subIndex = i % subdivision;
+      sector.classList.toggle('muted', isSubMuted(mutedSubs, beatIndex, subIndex));
+    });
+    this.clickSubsectorsEnabled =
+      subdivision > 1 && 60 / bpm / subdivision >= CLICK_SUBSECTOR_MIN_INTERVAL_SEC;
+    if (!this.clickSubsectorsEnabled) {
+      for (const sector of this.clickSubsectors) if (sector) sector.style.opacity = '0';
+    }
     this.renderSelector(this.selBeats, beats);
     this.renderSelector(this.selSubdiv, subdivision);
     this.updateDial(settings.bpm);
@@ -510,6 +535,7 @@ export class CircleView {
     // Beat sectors sit just under the dial and dots; they light up (with
     // lead-ahead) instead of the old sweeping needle.
     const sectorGroup = el('g', { class: 'sectors' });
+    const clickSubsectorGroup = el('g', { class: 'click-subsectors' });
     this.sectors = [];
     for (let i = 0; i < beats; i++) {
       const path = el('path', {
@@ -520,6 +546,21 @@ export class CircleView {
       this.sectors.push(path);
     }
 
+    const total = beats * subdivision;
+    this.clickSubsectors = Array.from({ length: total }, () => null);
+    if (subdivision > 1) {
+      for (let i = 0; i < total; i++) {
+        if (i % subdivision === 0) continue;
+        const path = el('path', {
+          class: 'click-subsector',
+          d: sectorPath(i, total, SECTOR_R_INNER, SECTOR_R_OUTER, CLICK_SUBSECTOR_GAP_DEG),
+          'data-tick-index': i,
+        });
+        clickSubsectorGroup.append(path);
+        this.clickSubsectors[i] = path;
+      }
+    }
+
     // Base ring, then the sectors, then the visual wheel, then the invisible
     // grab zone, then the ±1 buttons on top (so their hit targets win over the
     // drag zone), then the delta badge.
@@ -527,6 +568,7 @@ export class CircleView {
       el('circle', { class: 'base-ring', cx: CX, cy: CY, r: DOT_RING_R }),
       this.trainerRing,
       sectorGroup,
+      clickSubsectorGroup,
       this.dialGroup,
       this.dialHit,
       ...this.dialArrows,
@@ -537,7 +579,6 @@ export class CircleView {
       this.svg.append(dot, num, hit);
     }
 
-    const total = beats * subdivision;
     for (let i = 0; i < total; i++) {
       const { x, y } = dotCenter(i, total);
       const isBeat = i % subdivision === 0;
@@ -614,6 +655,7 @@ export class CircleView {
     this.polyVoiceTimers = voices.map(() => null);
     this.svg.replaceChildren();
     this.dots = [];
+    this.clickSubsectors = [];
     this.polyVoiceDots = voices.map(() => []);
     this.polyVoiceGuides = [];
 
@@ -746,6 +788,7 @@ export class CircleView {
     // subdivisions so the sector sweep is smooth regardless of subdivision.
     const beatFraction = (pos.subIndex + pos.fraction) / this.subdivision;
     this.updateSectors(pos.beatIndex, beatFraction);
+    this.updateClickSubsectors(index, pos.subIndex, pos.fraction);
   }
 
   /** Light the beat sectors with lead-ahead: the current beat is lit full for
@@ -777,6 +820,24 @@ export class CircleView {
 
   private clearSectors(): void {
     for (const sector of this.sectors) sector.style.opacity = '0';
+    for (const sector of this.clickSubsectors) if (sector) sector.style.opacity = '0';
+  }
+
+  /** Cross-fade the highlight from the current click slice into the next one. */
+  private updateClickSubsectors(index: number, subIndex: number, fraction: number): void {
+    for (const sector of this.clickSubsectors) if (sector) sector.style.opacity = '0';
+    if (!this.clickSubsectorsEnabled) return;
+
+    const progress = Math.min(1, Math.max(0, fraction));
+    const flow = progress * progress * (3 - 2 * progress); // smoothstep
+    const current = subIndex > 0 ? this.clickSubsectors[index] : null;
+    const next = subIndex + 1 < this.subdivision ? this.clickSubsectors[index + 1] : null;
+    if (current && !current.classList.contains('muted')) {
+      current.style.opacity = String(CLICK_SUBSECTOR_MAX_OPACITY * (1 - flow));
+    }
+    if (next && !next.classList.contains('muted')) {
+      next.style.opacity = String(CLICK_SUBSECTOR_MAX_OPACITY * flow);
+    }
   }
 
   /** Progress toward the next trainer speed-up, 0..1; null hides the ring */

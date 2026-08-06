@@ -100,6 +100,44 @@ describe('CircleView', () => {
       expect(subDots.length).toBe(4); // 4 beats × 2 subs, 4 are beat dots, 4 are sub dots
     });
 
+    it('creates quiet click subsectors only when subdivisions exist', () => {
+      circle.render(settings);
+      expect(svg.querySelectorAll('.click-subsector').length).toBe(0);
+
+      settings.subdivision = 3;
+      circle.render(settings);
+      expect(svg.querySelectorAll('.click-subsector').length).toBe(8);
+    });
+
+    it('smoothly flows into and out of the subdivision click sector', () => {
+      settings.subdivision = 2;
+      circle.render(settings);
+      const sector = svg.querySelector('.click-subsector[data-tick-index="1"]') as SVGPathElement;
+
+      circle.tick({ beatIndex: 0, subIndex: 0, fraction: 0.5 });
+      expect(Number(sector.style.opacity)).toBeGreaterThan(0);
+
+      circle.tick({ beatIndex: 0, subIndex: 1, fraction: 0 });
+      expect(Number(sector.style.opacity)).toBeGreaterThan(0);
+      const peak = Number(sector.style.opacity);
+
+      circle.tick({ beatIndex: 0, subIndex: 1, fraction: 0.5 });
+      expect(Number(sector.style.opacity)).toBeLessThan(peak);
+
+      circle.tick({ beatIndex: 1, subIndex: 0, fraction: 0 });
+      expect(Number(sector.style.opacity)).toBe(0);
+    });
+
+    it('disables the flowing subsector when clicks are too frequent', () => {
+      settings.bpm = 300;
+      settings.subdivision = 8;
+      circle.render(settings);
+      const sector = svg.querySelector('.click-subsector[data-tick-index="1"]') as SVGPathElement;
+
+      circle.tick({ beatIndex: 0, subIndex: 0, fraction: 0.75 });
+      expect(Number(sector.style.opacity)).toBe(0);
+    });
+
     it('changes dot count when beats change', () => {
       circle.render(settings); // 4 beats
       settings.beats = 6;
