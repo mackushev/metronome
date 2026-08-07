@@ -55,6 +55,7 @@
   --beat: #5db1ff;
   --active: #ffffff;
   --trainer: #3fd67f;
+  --auto: #c58cff;
   --voice-0: #4dd6b8;
   --voice-1: #6b8cff;
   --voice-2: #f4a347;
@@ -120,6 +121,7 @@
   --beat: #3ae1ff;
   --active: #ffffff;
   --trainer: #c6ff2e;
+  --auto: #e09aff;
   --voice-0: #3ae1ff;
   --voice-1: #c6ff2e;
   --voice-2: #ffe000;
@@ -1032,6 +1034,21 @@ body {
 
 .gap-panel:not(.collapsed) {
   border-color: var(--warn);
+}
+
+/* Auto-advance has its own violet identity, separate from the trainer green
+   and Gap Click coral. */
+#ex-auto-panel:not(.collapsed) {
+  border-color: var(--auto);
+}
+
+#ex-auto-panel:not(.collapsed) .collapsible-header,
+#ex-auto-panel:not(.collapsed) .ex-random-toggle {
+  color: var(--auto);
+}
+
+#ex-auto-panel:not(.collapsed) .ex-random-toggle input {
+  accent-color: var(--auto);
 }
 
 .gap-panel:not(.collapsed) .collapsible-header,
