@@ -101,6 +101,11 @@ export function voiceTooFast(bpm: number, subdivision: number): boolean {
   return voiceOnsetGap(bpm, subdivision) < VOICE_MIN_GAP_SEC;
 }
 
+/** Convert a visual beat time into the audio onset time selected by the user. */
+export function audioTimeForVisualTime(visualTime: number, offsetSec: number): number {
+  return visualTime + offsetSec;
+}
+
 export function tickKind(settings: Settings, pos: Position): TickKind | 'silent' {
   if (pos.subIndex !== 0) {
     return isSubMuted(settings.mutedSubs, pos.beatIndex, pos.subIndex) ? 'silent' : 'sub';
@@ -250,7 +255,10 @@ export class MetronomeEngine {
       .resume()
       .then(() => {
         if (!this.running) return;
-        this.nextTime = this.ctx!.currentTime + 0.08;
+        const offset = this.getSettings().audioOffsetSec;
+        // For an early audio offset, keep the first sound in the future while
+        // preserving the requested lead over the first visual beat.
+        this.nextTime = this.ctx!.currentTime + 0.08 - Math.min(0, offset);
         this.schedule();
       })
       .catch(() => this.onAudioIssue?.('blocked'));
@@ -380,7 +388,11 @@ export class MetronomeEngine {
       return;
     }
     const ctx = this.ctx!;
-    while (this.nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
+    while (
+      this.nextTime < ctx.currentTime + LOOKAHEAD_SEC ||
+      audioTimeForVisualTime(this.nextTime, this.getSettings().audioOffsetSec) <
+        ctx.currentTime + LOOKAHEAD_SEC
+    ) {
       const s = this.getSettings();
 
       // Count-in phase: one accent click per beat, no subdivisions, and none of
@@ -390,7 +402,14 @@ export class MetronomeEngine {
         const beatInterval = 60 / this.getSettings().bpm;
         const idx = (this.countInTotal - this.countInRemaining) % s.beats;
         this.master!.gain.value = s.volume;
-        scheduleSound(ctx, this.master!, s.sound, 'accent', this.nextTime, TICK_BEAT_LEVEL);
+        scheduleSound(
+          ctx,
+          this.master!,
+          s.sound,
+          'accent',
+          audioTimeForVisualTime(this.nextTime, s.audioOffsetSec),
+          TICK_BEAT_LEVEL,
+        );
         this.scheduled.push({
           beatIndex: idx,
           subIndex: 0,
@@ -462,11 +481,18 @@ export class MetronomeEngine {
         const voice = word ? this.voiceBuffers.get(word) : undefined;
         if (voice) {
           const gain = kind === 'accent' ? 1 : this.pos.subIndex === 0 ? 0.9 : 0.72;
-          this.playVoice(voice, this.nextTime, gain);
+          this.playVoice(voice, audioTimeForVisualTime(this.nextTime, s.audioOffsetSec), gain);
         } else {
           const subLevel =
             this.pos.subIndex === 0 ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
-          scheduleSound(ctx, this.master!, s.sound, kind, this.nextTime, subLevel);
+          scheduleSound(
+            ctx,
+            this.master!,
+            s.sound,
+            kind,
+            audioTimeForVisualTime(this.nextTime, s.audioOffsetSec),
+            subLevel,
+          );
         }
       }
 
@@ -498,7 +524,11 @@ export class MetronomeEngine {
    */
   private schedulePoly(): void {
     const ctx = this.ctx!;
-    while (this.nextTime < ctx.currentTime + LOOKAHEAD_SEC) {
+    while (
+      this.nextTime < ctx.currentTime + LOOKAHEAD_SEC ||
+      audioTimeForVisualTime(this.nextTime, this.getSettings().audioOffsetSec) <
+        ctx.currentTime + LOOKAHEAD_SEC
+    ) {
       const s = this.getSettings();
       const beats = s.beats;
       const sub = s.subdivision;
@@ -535,13 +565,28 @@ export class MetronomeEngine {
         const kind = tickKind(s, pos);
         if (kind !== 'silent') {
           const level = pos.subIndex === 0 ? TICK_BEAT_LEVEL : CLICK_VOLUME_FACTOR[s.clickVolume];
-          scheduleSound(ctx, this.master!, s.sound, kind, time, level);
+          scheduleSound(
+            ctx,
+            this.master!,
+            s.sound,
+            kind,
+            audioTimeForVisualTime(time, s.audioOffsetSec),
+            level,
+          );
         }
       } else {
         const voice = voices[ev.stream];
         if (voice && voice.enabled && !voice.muted.includes(ev.index)) {
           const kind: TickKind = ev.index === 0 ? 'accent' : 'normal';
-          scheduleSound(ctx, this.master!, voice.sound, kind, time, 0.45, voice.volume);
+          scheduleSound(
+            ctx,
+            this.master!,
+            voice.sound,
+            kind,
+            audioTimeForVisualTime(time, s.audioOffsetSec),
+            0.45,
+            voice.volume,
+          );
         }
       }
 

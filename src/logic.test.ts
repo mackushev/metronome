@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   advance,
+  audioTimeForVisualTime,
   countSyllable,
   MetronomeEngine,
   polyEventsForCycle,
@@ -11,6 +12,7 @@ import {
   cycleBeatState,
   defaultBeatStates,
   defaultSettings,
+  snapAudioOffset,
   resizeBeatStates,
   toggleSubMute,
   togglePolyMute,
@@ -81,6 +83,25 @@ describe('advance: tick grid', () => {
   it('steps beat by beat when there are no subdivisions', () => {
     expect(advance({ beatIndex: 0, subIndex: 0 }, 2, 1)).toEqual({ beatIndex: 1, subIndex: 0 });
     expect(advance({ beatIndex: 1, subIndex: 0 }, 2, 1)).toEqual({ beatIndex: 0, subIndex: 0 });
+  });
+});
+
+describe('audio offset calibration', () => {
+  it('snaps tiny offsets back to zero', () => {
+    expect(snapAudioOffset(0.02)).toBe(0);
+    expect(snapAudioOffset(-0.02)).toBe(0);
+  });
+
+  it('keeps useful offsets on the centisecond grid and clamps the range', () => {
+    expect(snapAudioOffset(-0.31)).toBe(-0.31);
+    expect(snapAudioOffset(0.48)).toBe(0.2);
+    expect(snapAudioOffset(-2)).toBe(-0.6);
+    expect(snapAudioOffset(2)).toBe(0.2);
+  });
+
+  it('converts visual time to the scheduled audio time', () => {
+    expect(audioTimeForVisualTime(10, -0.25)).toBe(9.75);
+    expect(audioTimeForVisualTime(10, 0.25)).toBe(10.25);
   });
 });
 

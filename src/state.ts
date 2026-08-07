@@ -86,6 +86,8 @@ export interface Settings {
   voiceCount: boolean;
   /** Volume 0..1 */
   volume: number;
+  /** Audio onset offset relative to the visual beat, in seconds. Positive delays sound. */
+  audioOffsetSec: number;
   /** Subdivision clicks vs beats loudness ratio */
   clickVolume: ClickVolume;
   /** Individually muted subdivision clicks, keys "beatIndex-subIndex" */
@@ -100,6 +102,12 @@ export interface Settings {
 
 export const BPM_MIN = 20;
 export const BPM_MAX = 300;
+// Give the slider three times as much room for playing sound early as for
+// delaying it: zero sits at 75% of the visual slider width.
+export const AUDIO_OFFSET_MIN = -0.6;
+export const AUDIO_OFFSET_MAX = 0.2;
+export const AUDIO_OFFSET_STEP = 0.01;
+export const AUDIO_OFFSET_SNAP_SEC = 0.03;
 export const BEATS_MIN = 1;
 export const BEATS_MAX = 8;
 export const SUBDIVISIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -201,6 +209,7 @@ export function defaultSettings(): Settings {
     sound: 'click',
     voiceCount: false,
     volume: 0.8,
+    audioOffsetSec: 0,
     clickVolume: 'soft',
     mutedSubs: [],
     beatStates: defaultBeatStates(4),
@@ -285,6 +294,17 @@ function parseGapClick(raw: unknown, fallback: GapClickSettings): GapClickSettin
   };
 }
 
+export function snapAudioOffset(value: number): number {
+  if (!Number.isFinite(value) || Math.abs(value) < AUDIO_OFFSET_SNAP_SEC) return 0;
+  const snapped = Number((Math.round(value / AUDIO_OFFSET_STEP) * AUDIO_OFFSET_STEP).toFixed(2));
+  return Math.min(AUDIO_OFFSET_MAX, Math.max(AUDIO_OFFSET_MIN, snapped));
+}
+
+function parseAudioOffset(value: unknown, fallback: number): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? snapAudioOffset(n) : fallback;
+}
+
 export function loadSettings(): Settings {
   const fallback = defaultSettings();
   try {
@@ -337,6 +357,7 @@ export function loadSettings(): Settings {
       voiceCount: typeof parsed.voiceCount === 'boolean' ? parsed.voiceCount : fallback.voiceCount,
       volume:
         typeof parsed.volume === 'number' ? Math.min(1, Math.max(0, parsed.volume)) : fallback.volume,
+      audioOffsetSec: parseAudioOffset(parsed.audioOffsetSec, fallback.audioOffsetSec),
       clickVolume:
         parsed.clickVolume && parsed.clickVolume in CLICK_VOLUME_FACTOR
           ? parsed.clickVolume

@@ -1,6 +1,7 @@
 import {
   BPM_MIN,
   BPM_MAX,
+  snapAudioOffset,
   DEFAULT_STAGE,
   GAP_BARS_MAX,
   GAP_BARS_MIN,
@@ -498,6 +499,21 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
   const soundSeg = byId<HTMLDivElement>('sound-seg');
   const balanceSeg = byId<HTMLDivElement>('balance-seg');
   const volumeSlider = byId<HTMLInputElement>('volume-slider');
+  const audioOffsetSlider = byId<HTMLInputElement>('audio-offset-slider');
+  const audioOffsetReset = byId<HTMLButtonElement>('audio-offset-reset');
+  const audioOffsetValue = byId<HTMLOutputElement>('audio-offset-value');
+  const syncSliderColor = (value: number): void => {
+    const color = value < 0 ? '#ff5c63' : value > 0 ? '#b77cff' : 'var(--accent)';
+    audioOffsetSlider.style.setProperty('--audio-sync-color', color);
+  };
+  const formatAudioOffset = (value: number): string =>
+    value === 0
+      ? '0.00 s · in sync'
+      : `${value > 0 ? '+' : '−'}${Math.abs(value).toFixed(2)} s · ${value > 0 ? 'delay' : 'earlier'}`;
+  audioOffsetSlider.addEventListener('input', () => {
+    store.update({ audioOffsetSec: snapAudioOffset(Number(audioOffsetSlider.value)) });
+  });
+  audioOffsetReset.addEventListener('click', () => store.update({ audioOffsetSec: 0 }));
 
   // --- Sound (main beat; also the polyrhythm base ticks) ---
   // Two click-style timbres plus a spoken-count option; drum sounds live in the
@@ -560,6 +576,10 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
     settingsToggle.classList.toggle('selected', open);
     settingsToggle.setAttribute('aria-expanded', String(open));
   };
+  // Prevent slider gestures from bubbling into any active BPM drag handler.
+  for (const eventName of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+    settingsPopup.addEventListener(eventName, (event) => event.stopPropagation());
+  }
   settingsToggle.addEventListener('click', () => setSettingsOpen(Boolean(settingsPopup.hidden)));
   document.addEventListener('pointerdown', (event) => {
     if (!settingsPopup.hidden && !settingsMenu.contains(event.target as Node)) {
@@ -580,6 +600,10 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
       btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
     }
     volumeSlider.value = String(Math.round(s.volume * 100));
+    audioOffsetSlider.value = s.audioOffsetSec.toFixed(2);
+    syncSliderColor(s.audioOffsetSec);
+    audioOffsetValue.value = formatAudioOffset(s.audioOffsetSec);
+    audioOffsetValue.textContent = formatAudioOffset(s.audioOffsetSec);
   });
 
   // Initial render
@@ -589,4 +613,8 @@ export function bindControls(store: Store, callbacks: ControlsCallbacks): void {
     btn.classList.toggle('selected', (btn.dataset.value as ClickVolume) === s.clickVolume);
   }
   volumeSlider.value = String(Math.round(s.volume * 100));
+  audioOffsetSlider.value = s.audioOffsetSec.toFixed(2);
+  syncSliderColor(s.audioOffsetSec);
+  audioOffsetValue.value = formatAudioOffset(s.audioOffsetSec);
+  audioOffsetValue.textContent = formatAudioOffset(s.audioOffsetSec);
 }

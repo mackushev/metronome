@@ -391,6 +391,11 @@ export class CircleView {
 
   private dialMove(event: PointerEvent): void {
     if (!this.dialDrag) return;
+    const settingsPopup = document.getElementById('settings-popup');
+    if (settingsPopup && !settingsPopup.hidden) {
+      this.dialUp();
+      return;
+    }
     // Safety net: if the button was released without us getting pointerup
     // (capture lost, focus change), end the drag instead of tracking a hover.
     if (event.buttons === 0) {

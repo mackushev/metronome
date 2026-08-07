@@ -51,6 +51,12 @@ page. Each mode has its own URL for analytics and deep-linking:
   the FAB near the circle; works on top of any mode.
 - **Volume slider**, Space for start/stop, settings persisted in
   localStorage, responsive layout for phone, tablet, and desktop.
+- **Audio sync calibration**: the Settings menu provides a slider with a
+  `−0.60…+0.20 s` range for correcting Bluetooth/electronic-module latency;
+  the zero mark is placed at 75% of the track to leave more room for early sound.
+  Negative values start sound earlier than the visual beat, positive values
+  delay it. The centered `0 / reset` pill instantly removes the offset, and
+  values within 30 ms of zero snap back to zero.
 - **Works offline**: a PWA service worker precaches the app after the
   first visit; it can be installed to the home screen.
 
@@ -85,7 +91,7 @@ src/
 └── ui/
     ├── circle.ts        — SVG circle: dots, beat sectors, jog-wheel dial, selectors, polyrhythm rings, trainer arc
     ├── beatbar.ts       — beat rectangles below the circle
-    ├── controls.ts      — settings panel (sound, balance, volume, speed-trainer stages, polyrhythm voices)
+    ├── controls.ts      — settings panel (sound, balance, volume, audio sync, speed-trainer stages, polyrhythm voices)
     ├── exercise-view.ts — exercise sheet display, filters, auto-advance, next-item preview
     └── stage-view.ts    — full-screen presentation overlay (big beat number, flash, wake lock)
 ```
@@ -95,7 +101,8 @@ src/
 - **Sound scheduling** is driven by a lookahead scheduler ("A Tale of Two
   Clocks") — a cheap `setInterval` schedules clicks ~120 ms ahead against the
   precise `AudioContext.currentTime` clock, so the tempo never drifts with
-  browser timer jitter.
+  browser timer jitter. The optional audio-sync offset shifts only the sound
+  onset while leaving the visual beat timeline unchanged.
 
 - **Client-side routing** uses `history.pushState` / `replaceState` so mode
   switches change the URL without a page reload. On GitHub Pages a

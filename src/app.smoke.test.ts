@@ -47,6 +47,14 @@ describe('smoke: the app mounts', () => {
     expect(document.getElementById('bpm-value')!.textContent).toBe('120');
   });
 
+  it('shows a centered audio sync reset control', () => {
+    const slider = document.getElementById('audio-offset-slider') as HTMLInputElement;
+    const reset = document.getElementById('audio-offset-reset') as HTMLButtonElement;
+    expect(slider.min).toBe('-0.6');
+    expect(slider.max).toBe('0.2');
+    expect(reset.textContent).toContain('reset');
+  });
+
   it('sound controls are built', () => {
     // The main-beat sound row offers the two click timbres plus the Voice count
     expect(document.querySelectorAll('#sound-seg .seg-btn').length).toBe(3);

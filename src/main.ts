@@ -260,6 +260,11 @@ center.addEventListener('pointerdown', (event) => {
 });
 center.addEventListener('pointermove', (event) => {
   if (!drag) return;
+  const settingsPopup = document.getElementById('settings-popup');
+  if (settingsPopup && !settingsPopup.hidden) {
+    drag = null;
+    return;
+  }
   const dy = drag.startY - event.clientY;
   if (Math.abs(dy) > 3) drag.moved = true;
   if (drag.moved) setUserBpm(clampBpm(drag.startBpm + dy / 2));

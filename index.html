@@ -68,6 +68,20 @@
               <input type="range" id="volume-slider" min="0" max="100" step="1" aria-label="Volume" />
               <span class="volume-icon">🔊</span>
             </div>
+            <div class="balance-label">Audio sync</div>
+            <div class="audio-sync-control">
+              <input
+                type="range"
+                id="audio-offset-slider"
+                min="-0.6"
+                max="0.2"
+                step="0.01"
+                value="0"
+                aria-label="Audio sync offset"
+              />
+              <button id="audio-offset-reset" class="audio-sync-reset" type="button" title="Reset audio sync">0 / reset</button>
+              <output id="audio-offset-value" class="audio-sync-value">0.00 s · in sync</output>
+            </div>
             <div class="balance-label">Theme</div>
             <div class="theme-picker" id="theme-picker" role="radiogroup" aria-label="Visual theme"></div>
           </div>
