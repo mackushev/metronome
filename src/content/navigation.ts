@@ -84,6 +84,19 @@ export function filterItems(model: ContentModel, pages: string[], topic: string)
 export function step(list: Item[], currentId: string | null, dir: number): Item | null {
   if (list.length === 0) return null;
   const pos = currentId ? list.findIndex((it) => it.id === currentId) : -1;
+  const current = pos >= 0 ? list[pos] : undefined;
+  if (current?.rhythm) {
+    const alphabet = current.rhythm.system === 'binary' ? 'ABCDEFGHIJKLMNOP' : 'QRSTUVWX';
+    const shift = current.rhythm.elements.length * dir;
+    const name = current.rhythm.elements
+      .map((element) => {
+        const index = alphabet.indexOf(element.letter);
+        return alphabet[((index + shift) % alphabet.length + alphabet.length) % alphabet.length];
+      })
+      .join('');
+    const target = list.find((item) => item.id === `benny-${current.rhythm!.system}-${name}`);
+    if (target) return target;
+  }
   const base = pos < 0 ? 0 : pos;
   const n = list.length;
   return list[(((base + dir) % n) + n) % n];
@@ -103,11 +116,20 @@ export function pickNext(
   if (list.length === 1) return list[0];
 
   if (random) {
-    const others = currentId ? list.filter((it) => it.id !== currentId) : list;
+    const current = currentId ? list.find((it) => it.id === currentId) : undefined;
+    const changesEveryRhythmElement = (candidate: Item): boolean =>
+      !current?.rhythm ||
+      !candidate.rhythm ||
+      candidate.rhythm.elements.every(
+        (element, index) => element.letter !== current.rhythm!.elements[index]?.letter,
+      );
+    const others = currentId
+      ? list.filter((it) => it.id !== currentId && changesEveryRhythmElement(it))
+      : list;
     const pool = others.length > 0 ? others : list;
     return pool[Math.floor(rng() * pool.length)];
   }
 
-  const pos = currentId ? list.findIndex((it) => it.id === currentId) : -1;
-  return list[(pos + 1) % list.length];
+  if (!currentId || !list.some((item) => item.id === currentId)) return list[0];
+  return step(list, currentId, 1);
 }

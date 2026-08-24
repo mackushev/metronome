@@ -1,6 +1,7 @@
 import { loadContent } from '../content/manifest';
 import { crop, filterItems, pickNext, step } from '../content/navigation';
-import type { ContentModel, Item } from '../content/types';
+import { rhythmicAlphabetImage } from '../content/rhythmic-alphabet';
+import type { ContentImage, ContentModel, Item } from '../content/types';
 import type { ExerciseState, Store } from '../state';
 import { bindDragBtn } from './controls';
 
@@ -9,6 +10,7 @@ function byId<T extends HTMLElement>(id: string): T {
 }
 
 function resolveSrc(path: string): string {
+  if (path.startsWith('data:') || path.startsWith('blob:')) return path;
   const base = import.meta.env.BASE_URL || '/';
   return base.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
 }
@@ -210,6 +212,13 @@ export class ExerciseView {
     if (!this.model || id === null) return null;
     const i = this.model.indexById.get(id);
     return i === undefined ? null : this.model.items[i];
+  }
+
+  /** Resolve either a normal content image or an SVG generated from a rhythm word. */
+  private imageFor(item: Item): ContentImage | null {
+    return item.rhythm
+      ? rhythmicAlphabetImage(item)
+      : (this.model?.imagesById.get(item.image) ?? null);
   }
 
   /**
@@ -444,7 +453,7 @@ export class ExerciseView {
   /** Render a specific item into the preview panel. */
   private renderPreview(item: Item): void {
     if (!this.model) return;
-    const image = this.model.imagesById.get(item.image);
+    const image = this.imageFor(item);
     if (!image) return;
 
     this.previewItemId = item.id;
@@ -573,7 +582,7 @@ export class ExerciseView {
       if (this.model && this.filtered().length === 0) this.showEmpty();
       return;
     }
-    const image = this.model.imagesById.get(item.image);
+    const image = this.imageFor(item);
     if (!image) return;
 
     this.empty.hidden = true;
@@ -617,7 +626,7 @@ export class ExerciseView {
   renderInto(viewport: HTMLElement, img: HTMLImageElement): boolean {
     const item = this.currentItem();
     if (!this.model || !item) return false;
-    const image = this.model.imagesById.get(item.image);
+    const image = this.imageFor(item);
     if (!image) return false;
     // Set the src first so the image starts loading even before the viewport has
     // been laid out (avoids a flash of the broken-image icon).

@@ -1,9 +1,8 @@
 # Adding exercise content
 
 The exercise viewer is fully data-driven. Everything lives in this one folder:
-the images and their descriptor files sit side by side. Adding material needs
-**no code changes** and **no central edits** — the app derives the page list,
-the topic list, ids and item order itself.
+image descriptors sit beside their assets, while supported generators need only
+a descriptor. The app derives the page list, topic list, ids and item order.
 
 All files conform to [`schema.json`](./schema.json) (JSON Schema 2020-12). You can
 hand that schema and an image to an LLM and ask it to produce a descriptor
@@ -70,6 +69,21 @@ page, and a descriptor may mix pages and topics freely.
 
 Ids and order are derived: items are numbered and ordered exactly as they appear
 across the manifest and within each file, so you never set an order by hand.
+
+## Generated rhythmic alphabet
+
+The Benny Greb alphabet has no raster asset. This descriptor generates every
+three-letter binary and ternary word and renders the cards as SVG in the viewer:
+
+```json
+{
+  "generator": "benny-greb-alphabet",
+  "topic": "Benny Greb alphabet",
+  "binaryPage": "Binary · A–P",
+  "ternaryPage": "Triplets · Q–X",
+  "wordLength": 3
+}
+```
 
 ## LLM prompt template
 

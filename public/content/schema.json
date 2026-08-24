@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://beat.js.org/content/schema.json",
   "title": "Exercise content",
-  "description": "Two file kinds in the content folder: the manifest (a list of descriptor filenames) and the descriptors. A descriptor holds one or several groups; each group points at an image and carries both a page and a topic. The app collects pages and topics and orders exercises by the order they appear — that order is not encoded here.",
+  "description": "Two file kinds in the content folder: the manifest (a list of descriptor filenames) and descriptors. A descriptor either points at exercise images or declares a supported exercise generator.",
   "$defs": {
     "bbox": {
       "type": "object",
@@ -66,22 +66,37 @@
       "required": ["image", "w", "h", "page", "topic"],
       "additionalProperties": false
     },
+    "rhythmicAlphabet": {
+      "type": "object",
+      "description": "Generates every Benny Greb binary and ternary rhythm word without source images.",
+      "properties": {
+        "generator": { "const": "benny-greb-alphabet" },
+        "topic": { "type": "string" },
+        "binaryPage": { "type": "string" },
+        "ternaryPage": { "type": "string" },
+        "wordLength": { "type": "integer", "minimum": 1, "maximum": 4, "default": 3 }
+      },
+      "required": ["generator", "topic", "binaryPage", "ternaryPage"],
+      "additionalProperties": false
+    },
     "manifest": {
       "type": "array",
       "description": "manifest.json — just the list of descriptor filenames.",
       "items": { "type": "string" }
     },
     "descriptor": {
-      "description": "A descriptor file: one group or an array of groups.",
+      "description": "A descriptor file: one image group, an array of groups, or a generator.",
       "oneOf": [
         { "$ref": "#/$defs/group" },
-        { "type": "array", "items": { "$ref": "#/$defs/group" } }
+        { "type": "array", "items": { "$ref": "#/$defs/group" } },
+        { "$ref": "#/$defs/rhythmicAlphabet" }
       ]
     }
   },
   "oneOf": [
     { "$ref": "#/$defs/manifest" },
     { "$ref": "#/$defs/group" },
-    { "type": "array", "items": { "$ref": "#/$defs/group" } }
+    { "type": "array", "items": { "$ref": "#/$defs/group" } },
+    { "$ref": "#/$defs/rhythmicAlphabet" }
   ]
 }

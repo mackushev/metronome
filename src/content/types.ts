@@ -68,8 +68,30 @@ export interface Group {
   grid?: Grid;
 }
 
-/** A descriptor file holds one group or several. */
-export type DescriptorFile = Group | Group[];
+/** A descriptor that expands into generated three-letter rhythm words. */
+export interface RhythmicAlphabetDescriptor {
+  generator: 'benny-greb-alphabet';
+  topic: string;
+  binaryPage: string;
+  ternaryPage: string;
+  /** Number of alphabet letters in one exercise. Defaults to 3. */
+  wordLength?: number;
+}
+
+/** A descriptor file holds image groups or a generated exercise collection. */
+export type ImageDescriptorFile = Group | Group[];
+export type DescriptorFile = ImageDescriptorFile | RhythmicAlphabetDescriptor;
+
+export interface RhythmElement {
+  letter: string;
+  /** Played/rest grid for this letter; four binary or three ternary slots. */
+  steps: boolean[];
+}
+
+export interface RhythmExercise {
+  system: 'binary' | 'ternary';
+  elements: RhythmElement[];
+}
 
 /** A group after loading: derived id and resolved image. */
 export interface Source {
@@ -92,6 +114,8 @@ export interface Item {
   title?: string;
   page: string;
   topic: string;
+  /** Present for a generated rhythmic-alphabet word instead of a raster crop. */
+  rhythm?: RhythmExercise;
 }
 
 /** The composed, in-memory content the UI navigates by page or by topic. */

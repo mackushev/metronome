@@ -1,16 +1,19 @@
 import { expandGrid } from './navigation';
+import { rhythmicAlphabetItems } from './rhythmic-alphabet';
 import type {
   BBox,
   ContentImage,
   ContentModel,
   DescriptorFile,
   Group,
+  ImageDescriptorFile,
   Item,
   ItemSpec,
   Manifest,
   Page,
   Source,
   Topic,
+  RhythmicAlphabetDescriptor,
 } from './types';
 
 /** Folder that holds every descriptor and image. */
@@ -78,7 +81,7 @@ function bucket(it: Item, key: 'page' | 'topic', seen: Set<string>, list: Topic[
  * Compose the navigable model from the loaded groups. Pages, topics, the flat
  * item index and all groupings are derived here — nothing is declared centrally.
  */
-export function composeModel(sources: Source[]): ContentModel {
+export function composeModel(sources: Source[], generatedItems: Item[] = []): ContentModel {
   const imagesById = new Map<string, ContentImage>();
   const items: Item[] = [];
 
@@ -86,6 +89,7 @@ export function composeModel(sources: Source[]): ContentModel {
     if (source.image) imagesById.set(source.image.id, source.image);
     for (const it of itemsFromSource(source)) items.push(it);
   }
+  items.push(...generatedItems);
 
   const pages: Page[] = [];
   const topics: Topic[] = [];
@@ -105,7 +109,7 @@ export function composeModel(sources: Source[]): ContentModel {
 }
 
 /** Build loaded groups (id + resolved image) from one on-disk descriptor file. */
-export function toSources(filename: string, file: DescriptorFile): Source[] {
+export function toSources(filename: string, file: ImageDescriptorFile): Source[] {
   const groups: Group[] = Array.isArray(file) ? file : [file];
   const base = baseId(filename);
   return groups.map((g, gi) => ({
@@ -116,6 +120,10 @@ export function toSources(filename: string, file: DescriptorFile): Source[] {
     items: g.items,
     grid: g.grid,
   }));
+}
+
+function isRhythmicAlphabetDescriptor(file: DescriptorFile): file is RhythmicAlphabetDescriptor {
+  return !Array.isArray(file) && 'generator' in file && file.generator === 'benny-greb-alphabet';
 }
 
 /**
@@ -129,12 +137,14 @@ export async function loadContent(manifestPath = `${CONTENT_DIR}/manifest.json`)
     (files ?? []).map(async (filename) => {
       try {
         const file = await fetchJson<DescriptorFile>(`${CONTENT_DIR}/${filename}`);
-        return toSources(filename, file);
+        return isRhythmicAlphabetDescriptor(file)
+          ? { sources: [] as Source[], items: rhythmicAlphabetItems(file) }
+          : { sources: toSources(filename, file), items: [] as Item[] };
       } catch (err) {
         console.warn(`[content] skipping ${filename}:`, err);
-        return [] as Source[];
+        return { sources: [] as Source[], items: [] as Item[] };
       }
     }),
   );
-  return composeModel(perFile.flat());
+  return composeModel(perFile.flatMap((loaded) => loaded.sources), perFile.flatMap((loaded) => loaded.items));
 }

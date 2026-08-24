@@ -140,6 +140,26 @@ describe('pickNext', () => {
     }
   });
 
+  it('random changes every position of a generated rhythm word', () => {
+    const rhythmItem = (id: string, letters: string[]): import('./types').Item => ({
+      id,
+      image: '',
+      bbox: { x: 0, y: 0, w: 1, h: 1 },
+      page: 'Binary',
+      topic: 'Alphabet',
+      rhythm: {
+        system: 'binary',
+        elements: letters.map((letter) => ({ letter, steps: [] })),
+      },
+    });
+    const list = [
+      rhythmItem('AAA', ['A', 'A', 'A']),
+      rhythmItem('BAA', ['B', 'A', 'A']),
+      rhythmItem('BBB', ['B', 'B', 'B']),
+    ];
+    expect(pickNext(list, 'AAA', true, () => 0)!.id).toBe('BBB');
+  });
+
   it('returns null for an empty list', () => {
     expect(pickNext([], null, false)).toBeNull();
   });
@@ -152,6 +172,24 @@ describe('step', () => {
     expect(step(list, 's3-g', 1)!.id).toBe('s1-1'); // wrap forward
     expect(step(list, 's1-1', -1)!.id).toBe('s3-g'); // wrap backward
     expect(step([], null, 1)).toBeNull();
+  });
+
+  it('steps generated words through consecutive non-overlapping alphabet triples', () => {
+    const generated = (id: string, letters: string): import('./types').Item => ({
+      id,
+      image: '',
+      bbox: { x: 0, y: 0, w: 1, h: 1 },
+      page: 'Binary',
+      topic: 'Alphabet',
+      rhythm: {
+        system: 'binary',
+        elements: [...letters].map((letter) => ({ letter, steps: [] })),
+      },
+    });
+    const list = [generated('benny-binary-ABC', 'ABC'), generated('benny-binary-DEF', 'DEF'), generated('benny-binary-NOP', 'NOP')];
+    expect(step(list, 'benny-binary-ABC', 1)!.id).toBe('benny-binary-DEF');
+    expect(step(list, 'benny-binary-ABC', -1)!.id).toBe('benny-binary-NOP');
+    expect(pickNext(list, 'benny-binary-ABC', false)!.id).toBe('benny-binary-DEF');
   });
 });
 
@@ -168,6 +206,11 @@ describe('published schema', () => {
 
   it('the shipped sample descriptor (several groups) validates', () => {
     const data = JSON.parse(readFileSync(resolve(dir, '0001.json'), 'utf-8'));
+    expect(validate(data)).toBe(true);
+  });
+
+  it('the generated rhythmic alphabet descriptor validates', () => {
+    const data = JSON.parse(readFileSync(resolve(dir, 'benny_greb.json'), 'utf-8'));
     expect(validate(data)).toBe(true);
   });
 

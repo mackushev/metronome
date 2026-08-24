@@ -38,6 +38,23 @@ async function mountMultiPage() {
   }
 }
 
+async function mountRhythmicAlphabet() {
+  manifest.push('benny_greb.json');
+  descriptors['benny_greb.json'] = {
+    generator: 'benny-greb-alphabet',
+    topic: 'Benny Greb alphabet',
+    binaryPage: 'Binary · A–P',
+    ternaryPage: 'Triplets · Q–X',
+    wordLength: 3,
+  };
+  try {
+    return await mount();
+  } finally {
+    manifest.pop();
+    delete descriptors['benny_greb.json'];
+  }
+}
+
 describe('ExerciseView (jsdom integration)', () => {
   beforeEach(() => {
     const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf-8');
@@ -192,6 +209,26 @@ describe('ExerciseView (jsdom integration)', () => {
     expect(store.get().exercise.currentId).toBe('0002-1');
     expect(document.getElementById('ex-preview-label')!.textContent).toContain('2/16');
     expect((document.getElementById('ex-preview-img') as HTMLImageElement).src).toContain('sample.svg');
+  });
+
+  it('selects and renders generated three-letter alphabet exercises', async () => {
+    const { store } = await mountRhythmicAlphabet();
+    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
+    topic.value = 'Benny Greb alphabet';
+    topic.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(store.get().exercise.currentId).toBe('benny-binary-ABC');
+    expect((document.getElementById('ex-img') as HTMLImageElement).src).toMatch(/^data:image\/svg\+xml/);
+    expect(document.getElementById('ex-caption')!.textContent).toContain('A · B · C · 1/3696');
+    (document.getElementById('ex-next') as HTMLButtonElement).click();
+    expect(store.get().exercise.currentId).toBe('benny-binary-DEF');
+    expect(document.getElementById('ex-caption')!.textContent).toContain('D · E · F · 2/3696');
+
+    const pages = [...document.querySelectorAll('#ex-page-chips .ex-page-chip')];
+    expect(pages.map((page) => page.textContent)).toEqual(['Binary · A–P', 'Triplets · Q–X']);
+    (pages[1] as HTMLButtonElement).click();
+    expect(store.get().exercise.currentId).toBe('benny-ternary-QRS');
+    expect(document.getElementById('ex-caption')!.textContent).toContain('Q · R · S · 1/336');
   });
 
   it('retries content loading after a transient manifest failure', async () => {
