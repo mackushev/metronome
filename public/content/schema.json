@@ -74,7 +74,7 @@
         "topic": { "type": "string" },
         "binaryPage": { "type": "string" },
         "ternaryPage": { "type": "string" },
-        "wordLength": { "type": "integer", "minimum": 1, "maximum": 4, "default": 3 }
+        "wordLength": { "type": "integer", "minimum": 1, "maximum": 4, "default": 4 }
       },
       "required": ["generator", "topic", "binaryPage", "ternaryPage"],
       "additionalProperties": false

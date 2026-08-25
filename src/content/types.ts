@@ -68,13 +68,13 @@ export interface Group {
   grid?: Grid;
 }
 
-/** A descriptor that expands into generated three-letter rhythm words. */
+/** A descriptor that expands into generated rhythm words. */
 export interface RhythmicAlphabetDescriptor {
   generator: 'benny-greb-alphabet';
   topic: string;
   binaryPage: string;
   ternaryPage: string;
-  /** Number of alphabet letters in one exercise. Defaults to 3. */
+  /** Number of alphabet letters in one exercise. Defaults to 4. */
   wordLength?: number;
 }
 

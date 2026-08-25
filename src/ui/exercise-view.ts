@@ -248,16 +248,24 @@ export class ExerciseView {
 
   /** Apply a filter change, keeping the current item if it still matches and
       otherwise jumping to the first item of the new selection. */
-  private setFilter(p: { pages?: string[]; topic?: string }): void {
+  private setFilter(p: { pages?: string[]; topic?: string }, keepCurrent = true): void {
     const nextState = { ...this.s(), ...p };
     const list = this.filtered(nextState);
-    const keep = list.some((it) => it.id === nextState.currentId);
+    const keep = keepCurrent && list.some((it) => it.id === nextState.currentId);
     this.resetAutoAfterNavigation();
     this.patch({ ...p, currentId: keep ? nextState.currentId : (list[0]?.id ?? null) });
   }
 
   /** Toggle one page chip on/off; empty selection means "all pages". */
   private togglePage(id: string): void {
+    const topicItems = this.model?.itemsByTopic.get(this.s().topic) ?? [];
+    if (topicItems.some((item) => item.rhythm)) {
+      // Binary and ternary are practice modes, not combinable source pages.
+      // Turning the active one off returns to the default (binary-first) list.
+      const pages = this.s().pages.includes(id) ? [] : [id];
+      this.setFilter({ pages }, false);
+      return;
+    }
     const pages = this.s().pages.includes(id)
       ? this.s().pages.filter((p) => p !== id)
       : [...this.s().pages, id];

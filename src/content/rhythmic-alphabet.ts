@@ -36,18 +36,25 @@ function words(alphabet: RhythmElement[], length: number): RhythmElement[][] {
   }
   // Put the practice sequence first: ABC → DEF → …, wrapping at the end.
   // The remaining permutations stay available to Random mode.
-  const linear = Array.from({ length: alphabet.length }, (_, index) => {
+  const linearCandidates = Array.from({ length: alphabet.length }, (_, index) => {
     const start = (index * length) % alphabet.length;
     return Array.from({ length }, (_unused, offset) => alphabet[(start + offset) % alphabet.length]);
   });
   const key = (word: RhythmElement[]) => word.map((element) => element.letter).join('');
+  const seenLinear = new Set<string>();
+  const linear = linearCandidates.filter((word) => {
+    const wordKey = key(word);
+    if (seenLinear.has(wordKey)) return false;
+    seenLinear.add(wordKey);
+    return true;
+  });
   const linearKeys = new Set(linear.map(key));
   return [...linear, ...result.filter((word) => !linearKeys.has(key(word)))];
 }
 
 /** Expand a descriptor into every word whose letters do not repeat internally. */
 export function rhythmicAlphabetItems(descriptor: RhythmicAlphabetDescriptor): Item[] {
-  const length = Math.max(1, Math.round(descriptor.wordLength ?? 3));
+  const length = Math.max(1, Math.round(descriptor.wordLength ?? 4));
   const make = (
     system: RhythmExercise['system'],
     alphabet: RhythmElement[],
@@ -80,7 +87,7 @@ function escapeXml(value: string): string {
   })[char]!);
 }
 
-/** Render one rhythm word as three lightly imperfect book-like cards. */
+/** Render one rhythm word as lightly imperfect book-like cards. */
 export function rhythmicAlphabetImage(item: Item): ContentImage | null {
   if (!item.rhythm) return null;
   const cached = svgCache.get(item.id);

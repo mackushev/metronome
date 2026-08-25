@@ -45,7 +45,7 @@ async function mountRhythmicAlphabet() {
     topic: 'Benny Greb alphabet',
     binaryPage: 'Binary · A–P',
     ternaryPage: 'Triplets · Q–X',
-    wordLength: 3,
+    wordLength: 4,
   };
   try {
     return await mount();
@@ -217,18 +217,26 @@ describe('ExerciseView (jsdom integration)', () => {
     topic.value = 'Benny Greb alphabet';
     topic.dispatchEvent(new Event('change', { bubbles: true }));
 
-    expect(store.get().exercise.currentId).toBe('benny-binary-ABC');
+    expect(store.get().exercise.currentId).toBe('benny-binary-ABCD');
     expect((document.getElementById('ex-img') as HTMLImageElement).src).toMatch(/^data:image\/svg\+xml/);
-    expect(document.getElementById('ex-caption')!.textContent).toContain('A · B · C · 1/3696');
+    expect(document.getElementById('ex-caption')!.textContent).toContain('A · B · C · D · 1/45360');
     (document.getElementById('ex-next') as HTMLButtonElement).click();
-    expect(store.get().exercise.currentId).toBe('benny-binary-DEF');
-    expect(document.getElementById('ex-caption')!.textContent).toContain('D · E · F · 2/3696');
+    expect(store.get().exercise.currentId).toBe('benny-binary-EFGH');
+    expect(document.getElementById('ex-caption')!.textContent).toContain('E · F · G · H · 2/45360');
 
     const pages = [...document.querySelectorAll('#ex-page-chips .ex-page-chip')];
     expect(pages.map((page) => page.textContent)).toEqual(['Binary · A–P', 'Triplets · Q–X']);
     (pages[1] as HTMLButtonElement).click();
-    expect(store.get().exercise.currentId).toBe('benny-ternary-QRS');
-    expect(document.getElementById('ex-caption')!.textContent).toContain('Q · R · S · 1/336');
+    expect(store.get().exercise.currentId).toBe('benny-ternary-QRST');
+    expect(document.getElementById('ex-caption')!.textContent).toContain('Q · R · S · T · 1/1680');
+
+    // Turning Triplets off returns to the default binary sequence; navigation
+    // must not remain trapped in the ternary alphabet.
+    (pages[1] as HTMLButtonElement).click();
+    expect(store.get().exercise.pages).toEqual([]);
+    expect(store.get().exercise.currentId).toBe('benny-binary-ABCD');
+    (document.getElementById('ex-next') as HTMLButtonElement).click();
+    expect(store.get().exercise.currentId).toBe('benny-binary-EFGH');
   });
 
   it('retries content loading after a transient manifest failure', async () => {

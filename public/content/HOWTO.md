@@ -73,7 +73,7 @@ across the manifest and within each file, so you never set an order by hand.
 ## Generated rhythmic alphabet
 
 The Benny Greb alphabet has no raster asset. This descriptor generates every
-three-letter binary and ternary word and renders the cards as SVG in the viewer:
+four-letter binary and ternary word and renders the cards as SVG in the viewer:
 
 ```json
 {
@@ -81,7 +81,7 @@ three-letter binary and ternary word and renders the cards as SVG in the viewer:
   "topic": "Benny Greb alphabet",
   "binaryPage": "Binary · A–P",
   "ternaryPage": "Triplets · Q–X",
-  "wordLength": 3
+  "wordLength": 4
 }
 ```
 
