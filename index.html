@@ -277,17 +277,17 @@
             </div>
           </div>
           <div class="exercise-controls">
-            <label>Exercise
-              <select id="ex-topic"></select>
-            </label>
+            <select id="ex-group" required aria-label="Exercise group" aria-describedby="ex-empty"></select>
+            <div class="ex-topic-field" id="ex-topic-field" hidden>
+              <div class="ex-page-chips" id="ex-topic" role="group" aria-label="Exercise topics"></div>
+            </div>
             <div id="ex-page-field" class="ex-page-field" hidden>
               <span class="ex-page-label">Pages</span>
               <div id="ex-page-chips" class="ex-page-chips"></div>
             </div>
           </div>
           <p class="exercise-empty" id="ex-empty" hidden>
-            No exercises yet. Add images and descriptors under
-            <code>public/content/</code> — see <code>HOWTO.md</code>.
+            Choose an exercise group to start practicing.
           </p>
         </section>
       </main>

@@ -1,3 +1,4 @@
+import { availableGroups, exerciseGroup } from '../content/groups';
 import { loadContent } from '../content/manifest';
 import { crop, filterItems, pickNext, step } from '../content/navigation';
 import { rhythmicAlphabetImage } from '../content/rhythmic-alphabet';
@@ -35,9 +36,9 @@ export interface StageExerciseSource {
 }
 
 /**
- * Exercise viewer: shows one item (a crop of an image). Navigation is just two
- * filters — page and topic — plus an optional auto-advance (sequential, or
- * random within the filter). Content is loaded lazily on first show.
+ * Exercise viewer: choose a book/technique group, then optionally narrow by
+ * topic and pages. Navigation and auto-advance stay within that group.
+ * Content is loaded lazily on first show.
  */
 export class ExerciseView {
   private model: ContentModel | null = null;
@@ -78,7 +79,10 @@ export class ExerciseView {
   private readonly empty = byId<HTMLParagraphElement>('ex-empty');
   private readonly pageChips = byId<HTMLDivElement>('ex-page-chips');
   private readonly pageField = byId<HTMLElement>('ex-page-field');
-  private readonly topicSel = byId<HTMLSelectElement>('ex-topic');
+  private readonly groupSel = byId<HTMLSelectElement>('ex-group');
+  private topicsPopulatedFor: string | null = null;
+  private readonly topicButtons = byId<HTMLDivElement>('ex-topic');
+  private readonly topicField = byId<HTMLDivElement>('ex-topic-field');
 
   /** The topic the page picker is currently populated for (avoids rebuilding it every sync). */
   private pagesPopulatedFor: string | null = null;
@@ -102,11 +106,11 @@ export class ExerciseView {
     this.store = store;
     byId<HTMLButtonElement>('ex-prev').addEventListener('click', () => this.step(-1));
     byId<HTMLButtonElement>('ex-next').addEventListener('click', () => this.step(1));
+    this.groupSel.addEventListener('change', () =>
+      this.setFilter({ group: this.groupSel.value, topics: [], pages: [] }, false),
+    );
     // Choosing a topic resets the page filter — the page chips then list only
     // the pages that belong to that topic (and are hidden while no topic is set).
-    this.topicSel.addEventListener('change', () =>
-      this.setFilter({ topic: this.topicSel.value, pages: [] }),
-    );
     this.randomChk.addEventListener('change', () => {
       // Re-pick the previewed item so it reflects the new sequential/random mode.
       this.cachedNextItem = null;
@@ -206,14 +210,17 @@ export class ExerciseView {
 
   /** Items matching the current page/topic filter, in order. */
   private filtered(state: ExerciseState = this.s()): Item[] {
-    return this.model ? filterItems(this.model, state.pages, state.topic) : [];
+    return this.model && state.group
+      ? filterItems(this.model, state.pages, state.topics).filter((item) => exerciseGroup(item) === state.group)
+      : [];
   }
 
   private currentItem(): Item | null {
     const id = this.s().currentId;
-    if (!this.model || id === null) return null;
+    if (!this.model || !this.s().group || id === null) return null;
     const i = this.model.indexById.get(id);
-    return i === undefined ? null : this.model.items[i];
+    const item = i === undefined ? null : this.model.items[i];
+    return item && exerciseGroup(item) === this.s().group ? item : null;
   }
 
   /** Resolve either a normal content image or an SVG generated from a rhythm word. */
@@ -233,9 +240,15 @@ export class ExerciseView {
     if (!this.model) return;
     const s = this.s();
     const patch: Partial<ExerciseState> = {};
-    const pages = s.pages.filter((p) => this.model!.itemsByPage.has(p));
+    if (!availableGroups(this.model.items).some((group) => group.id === s.group)) {
+      this.patch({ group: '', topics: [], pages: [], currentId: null });
+      return;
+    }
+    const groupItems = this.model.items.filter((item) => exerciseGroup(item) === s.group);
+    const topics = s.topics.filter((topic) => groupItems.some((item) => item.topic === topic));
+    if (topics.length !== s.topics.length) patch.topics = topics;
+    const pages = s.pages.filter((p) => groupItems.some((item) => item.page === p && (!topics.length || topics.includes(item.topic))));
     if (pages.length !== s.pages.length) patch.pages = pages;
-    if (s.topic && !this.model.itemsByTopic.has(s.topic)) patch.topic = '';
     if (Object.keys(patch).length > 0) this.patch(patch);
   }
 
@@ -250,7 +263,7 @@ export class ExerciseView {
 
   /** Apply a filter change, keeping the current item if it still matches and
       otherwise jumping to the first item of the new selection. */
-  private setFilter(p: { pages?: string[]; topic?: string }, keepCurrent = true): void {
+  private setFilter(p: { group?: string; pages?: string[]; topics?: string[] }, keepCurrent = true): void {
     const nextState = { ...this.s(), ...p };
     const list = this.filtered(nextState);
     const keep = keepCurrent && list.some((it) => it.id === nextState.currentId);
@@ -260,7 +273,7 @@ export class ExerciseView {
 
   /** Toggle one page chip on/off; empty selection means "all pages". */
   private togglePage(id: string): void {
-    const topicItems = this.model?.itemsByTopic.get(this.s().topic) ?? [];
+    const topicItems = this.filtered({ ...this.s(), pages: [] });
     if (topicItems.some((item) => item.rhythm)) {
       // Binary and ternary are practice modes, not combinable source pages.
       // Turning the active one off returns to the default (binary-first) list.
@@ -334,6 +347,7 @@ export class ExerciseView {
 
   /** Set a new auto-advance interval from the ±15s buttons. */
   private setSec(sec: number): void {
+    if (!this.s().group) return;
     this.lastAutoSec = sec;
     this.patch({ autoSec: sec });
   }
@@ -345,7 +359,7 @@ export class ExerciseView {
   }
 
   private syncAuto(): void {
-    const shouldRun = this.s().autoSec > 0 && !this.root.hidden && this.playing;
+    const shouldRun = this.s().autoSec > 0 && !this.root.hidden && this.playing && this.filtered().length > 0;
     if (!shouldRun) {
       this.stopAuto();
       this.hideProgress();
@@ -517,23 +531,50 @@ export class ExerciseView {
 
   private populatePickers(): void {
     if (!this.model) return;
-    this.fillSelect(this.topicSel, 'All topics', this.model.topics);
-    this.populatePages(this.s().topic);
+    this.fillSelect(this.groupSel, 'Choose a group…', availableGroups(this.model.items));
+    this.groupSel.options[0].disabled = true;
+    this.populateTopics();
+    this.populatePages(this.s().topics);
+  }
+
+  private populateTopics(): void {
+    if (!this.model) return;
+    const group = this.s().group;
+    const topics = new Set(this.model.items.filter((item) => exerciseGroup(item) === group).map((item) => item.topic));
+    this.topicButtons.replaceChildren();
+    const choices = this.model.topics.filter((topic) => topics.has(topic.id));
+    for (const topic of choices) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ex-page-chip';
+      button.dataset.topic = topic.id;
+      button.textContent = topic.title;
+      button.addEventListener('click', () => {
+        const selected = this.s().topics;
+        const topics = selected.includes(topic.id)
+          ? selected.filter((id) => id !== topic.id)
+          : [...selected, topic.id];
+        this.setFilter({ topics, pages: [] });
+      });
+      this.topicButtons.append(button);
+    }
+    this.topicsPopulatedFor = group;
   }
 
   /** Pages that contain items of the given topic, in global page order. */
-  private pagesForTopic(topic: string): { id: string; title: string }[] {
+  private pagesForTopics(topics: string[]): { id: string; title: string }[] {
     if (!this.model) return [];
-    if (!topic) return this.model.pages;
-    const present = new Set((this.model.itemsByTopic.get(topic) ?? []).map((it) => it.page));
+    const present = new Set(this.model.items.filter((item) =>
+      exerciseGroup(item) === this.s().group && (!topics.length || topics.includes(item.topic)),
+    ).map((item) => item.page));
     return this.model.pages.filter((p) => present.has(p.id));
   }
 
   /** Rebuild the page chips for `topic` and remember what they were built for. */
-  private populatePages(topic: string): void {
+  private populatePages(topics: string[]): void {
     if (!this.model) return;
     this.pageChips.innerHTML = '';
-    for (const page of this.pagesForTopic(topic)) {
+    for (const page of this.pagesForTopics(topics)) {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'ex-page-chip';
@@ -542,27 +583,50 @@ export class ExerciseView {
       chip.addEventListener('click', () => this.togglePage(page.id));
       this.pageChips.append(chip);
     }
-    this.pagesPopulatedFor = topic;
+    this.pagesPopulatedFor = JSON.stringify(topics);
   }
 
   private showEmpty(): void {
     this.empty.hidden = false;
+    this.empty.textContent = !this.model ? 'Could not load exercises. Try again.'
+      : !this.s().group ? 'Choose an exercise group to start practicing.'
+      : 'No exercises match this selection.';
     this.viewport.hidden = true;
+    this.caption.textContent = '';
+    this.hidePreview();
   }
 
   private syncControls(): void {
     const s = this.s();
-    this.topicSel.value = s.topic;
+    this.groupSel.value = s.group;
+    if (this.topicsPopulatedFor !== s.group) {
+      this.populateTopics();
+      this.pagesPopulatedFor = null;
+    }
+    this.topicField.hidden = !s.group;
+    this.autoToggle.disabled = !s.group;
+    this.autoNum.setAttribute('aria-disabled', String(!s.group));
+    this.randomChk.disabled = !s.group;
+    for (const id of ['ex-prev', 'ex-next', 'ex-delta-dec', 'ex-delta-inc']) {
+      byId<HTMLButtonElement>(id).disabled = !s.group;
+    }
+    for (const button of this.topicButtons.querySelectorAll<HTMLButtonElement>('button')) {
+      const selected = s.topics.includes(button.dataset.topic ?? '');
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    }
     // The page chips are filtered by the selected topic and only shown once a
     // topic is chosen. Rebuild them only when the topic actually changed.
-    if (this.pagesPopulatedFor !== s.topic) this.populatePages(s.topic);
+    if (this.pagesPopulatedFor !== JSON.stringify(s.topics)) this.populatePages(s.topics);
     // Hide the page chips when there's nothing to choose: no topic selected,
     // or the topic spans a single page.
-    this.pageField.hidden = !s.topic || this.pagesForTopic(s.topic).length <= 1;
+    this.pageField.hidden = !s.topics.length || this.pagesForTopics(s.topics).length <= 1;
     // Reflect the active set; empty selection leaves every chip off ("all pages").
     for (const chip of this.pageChips.children) {
       const el = chip as HTMLElement;
-      el.classList.toggle('active', s.pages.includes(el.dataset.page ?? ''));
+      const selected = s.pages.includes(el.dataset.page ?? '');
+      el.classList.toggle('active', selected);
+      el.setAttribute('aria-pressed', String(selected));
     }
     this.randomChk.checked = s.random;
     const autoOn = s.autoSec > 0;

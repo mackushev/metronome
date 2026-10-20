@@ -58,12 +58,14 @@ export interface GapClickSettings {
 }
 
 export interface ExerciseState {
+  /** Required practice collection; empty means the user has not chosen yet. */
+  group: string;
   /** Currently shown item id; null until content loads / first selection. */
   currentId: string | null;
   /** Selected page filter: a set of page ids; empty = every page is active. */
   pages: string[];
-  /** Topic filter; '' = any topic. */
-  topic: string;
+  /** Selected topics; empty means all topics in the chosen group. */
+  topics: string[];
   /** Auto-advance picks a random item within the filter instead of the next one. */
   random: boolean;
   /** Auto-advance interval in seconds; 0 = off. */
@@ -215,7 +217,7 @@ export function defaultSettings(): Settings {
     beatStates: defaultBeatStates(4),
     trainer: { enabled: false, stages: [{ ...DEFAULT_STAGE }] },
     gapClick: { enabled: false, random: false, clickBars: 1, gapBars: 1 },
-    exercise: { currentId: null, pages: [], topic: '', random: false, autoSec: 0 },
+    exercise: { group: '', currentId: null, pages: [], topics: [], random: false, autoSec: 0 },
     polyrhythm: { voices: defaultVoices() },
   };
 }
@@ -257,9 +259,12 @@ function parseExercise(raw: unknown, fallback: ExerciseState): ExerciseState {
       ? [e.page]
       : fallback.pages;
   return {
+    group: typeof e.group === 'string' ? e.group : '',
     currentId: typeof e.currentId === 'string' ? e.currentId : null,
     pages,
-    topic: typeof e.topic === 'string' ? e.topic : fallback.topic,
+    topics: Array.isArray(e.topics)
+      ? [...new Set(e.topics.filter((topic): topic is string => typeof topic === 'string' && topic.length > 0))]
+      : typeof e.topic === 'string' && e.topic ? [e.topic] : fallback.topics,
     random: typeof e.random === 'boolean' ? e.random : fallback.random,
     autoSec: typeof e.autoSec === 'number' && e.autoSec >= 0 ? e.autoSec : fallback.autoSec,
   };

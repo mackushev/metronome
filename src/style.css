@@ -1835,7 +1835,9 @@ body {
 
 .exercise-controls > label {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  max-width: 100%;
   gap: 8px;
 }
 
@@ -1845,6 +1847,8 @@ body {
 }
 
 .exercise-controls select {
+  min-width: 0;
+  max-width: 100%;
   min-height: 38px;
   padding: 0 8px;
   border-radius: var(--control-radius);
@@ -1854,14 +1858,22 @@ body {
   font-size: 14px;
 }
 
-/* --- Page filter chips (toggle plates) --- */
-
-.ex-page-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.exercise-controls select:disabled {
+  opacity: 0.45;
+}
+.number-scrubber[aria-disabled='true'] {
+  pointer-events: none;
+  opacity: 0.45;
 }
 
+/* --- Page filter chips (toggle plates) --- */
+
+.ex-topic-field,
+.ex-page-field {
+  display: contents;
+}
+
+.ex-topic-field[hidden],
 .ex-page-field[hidden] {
   display: none;
 }
@@ -1871,13 +1883,12 @@ body {
 }
 
 .ex-page-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: contents;
 }
 
 /* Off by default; an off chip still counts as "all pages" when none are on. */
 .ex-page-chip {
+  max-width: 100%;
   min-height: 32px;
   padding: 0 12px;
   border-radius: var(--chip-radius);

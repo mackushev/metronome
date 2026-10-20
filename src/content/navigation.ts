@@ -74,9 +74,10 @@ export type Rng = () => number;
  * means "any": no pages selected + no topic returns every item. When one or
  * more pages are selected, an item matches if it belongs to any of them.
  */
-export function filterItems(model: ContentModel, pages: string[], topic: string): Item[] {
+export function filterItems(model: ContentModel, pages: string[], topic: string | string[]): Item[] {
+  const topics = Array.isArray(topic) ? topic : topic ? [topic] : [];
   return model.items.filter(
-    (it) => (pages.length === 0 || pages.includes(it.page)) && (!topic || it.topic === topic),
+    (it) => (pages.length === 0 || pages.includes(it.page)) && (topics.length === 0 || topics.includes(it.topic)),
   );
 }
 

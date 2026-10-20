@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Store, defaultSettings } from '../state';
+import { Store, defaultSettings, loadSettings } from '../state';
 import { ExerciseView } from './exercise-view';
 
 const grid = { rows: 8, cols: 2, margin: { top: 120, right: 60, bottom: 60, left: 60 }, gapX: 40, gapY: 30 };
@@ -19,10 +19,23 @@ function mockFetch() {
   });
 }
 
-async function mount() {
+function chooseTopic(value: string) {
+  const button = [...document.querySelectorAll<HTMLButtonElement>('#ex-topic button')]
+    .find((button) => button.dataset.topic === value)!;
+  button.click();
+}
+
+function chooseGroup(value: string) {
+  const group = document.getElementById('ex-group') as HTMLSelectElement;
+  group.value = value;
+  group.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+async function mount(selectGroup = true) {
   const store = new Store(defaultSettings());
   const view = new ExerciseView(store);
   await view.show();
+  if (selectGroup) chooseGroup('other');
   return { store, view };
 }
 
@@ -66,7 +79,63 @@ describe('ExerciseView (jsdom integration)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('loads content on show and renders the first item', async () => {
+  it('requires an explicit group before showing exercises or starting auto-advance', async () => {
+    const { store, view } = await mount(false);
+    expect(store.get().exercise.currentId).toBeNull();
+    expect(document.getElementById('ex-viewport')!.hidden).toBe(true);
+    expect(document.getElementById('ex-empty')!.textContent).toContain('Choose an exercise group');
+    expect((document.getElementById('ex-group') as HTMLSelectElement).required).toBe(true);
+    expect(document.getElementById('ex-topic-field')!.hidden).toBe(true);
+    (document.getElementById('ex-next') as HTMLButtonElement).click();
+    store.update({ exercise: { ...store.get().exercise, autoSec: 20 } });
+    view.setPlaying(true);
+    view.onMeasureStart();
+    expect(view.stageInfo().itemId).toBeNull();
+    expect(view.stageInfo().remainingSec).toBeNull();
+    expect(document.getElementById('ex-preview')!.hidden).toBe(true);
+    chooseGroup('other');
+    expect(store.get().exercise.currentId).toBe('0001-1');
+    view.setPlaying(false);
+  });
+
+  it('switching groups clears topic/pages and keeps previews inside the group', async () => {
+    const { store, view } = await mountRhythmicAlphabet();
+    (document.getElementById('ex-auto-toggle') as HTMLButtonElement).click();
+    chooseGroup('benny-greb');
+    expect(store.get().exercise.topics).toEqual([]);
+    expect(store.get().exercise.pages).toEqual([]);
+    const topics = [...document.querySelectorAll<HTMLButtonElement>('#ex-topic button')].map((o) => o.dataset.topic);
+    expect(topics).toEqual(['Benny Greb alphabet']);
+    expect((document.getElementById('ex-preview-img') as HTMLImageElement).src).toMatch(/^data:/);
+    chooseGroup('other');
+    expect(store.get().exercise.currentId).toBe('0001-1');
+    expect((document.getElementById('ex-preview-img') as HTMLImageElement).src).toContain('sample.svg');
+    expect(view.stageInfo().itemId).toBe('0001-1');
+    (document.getElementById('ex-auto-toggle') as HTMLButtonElement).click();
+  });
+
+  it('restores a valid saved group and exercise', async () => {
+    const settings = defaultSettings();
+    settings.exercise = { ...settings.exercise, group: 'other', topics: ['Warm-ups'], currentId: '0001-4' };
+    const store = new Store(settings);
+    const view = new ExerciseView(store);
+    await view.show();
+    expect(store.get().exercise.currentId).toBe('0001-4');
+    expect((document.getElementById('ex-group') as HTMLSelectElement).value).toBe('other');
+    expect(document.getElementById('ex-caption')!.textContent).toContain('4/16');
+  });
+
+  it('clears stale saved groups instead of falling back to all exercises', async () => {
+    const settings = defaultSettings();
+    settings.exercise = { ...settings.exercise, group: 'removed-group', topics: ['Warm-ups'], currentId: '0001-1', pages: ['1'] };
+    const store = new Store(settings);
+    const view = new ExerciseView(store);
+    await view.show();
+    expect(store.get().exercise).toMatchObject({ group: '', topics: [], currentId: null, pages: [] });
+    expect(view.stageInfo().itemId).toBeNull();
+  });
+
+  it('renders the first item after a group is selected', async () => {
     const { store } = await mount();
     const img = document.getElementById('ex-img') as HTMLImageElement;
     expect(img.src).toContain('content/sample.svg');
@@ -75,18 +144,56 @@ describe('ExerciseView (jsdom integration)', () => {
     expect(store.get().exercise.currentId).toBe('0001-1');
   });
 
-  it('the topic picker is derived with an "All" option', async () => {
+  it('combines selected topics and removes only the topic clicked again', async () => {
+    manifest.push('0002.json');
+    descriptors['0002.json'] = { ...descriptor, page: '2', topic: 'Coordination' };
+    try {
+      const { store } = await mount();
+      chooseTopic('Warm-ups');
+      expect(document.getElementById('ex-caption')!.textContent).toContain('1/16');
+      chooseTopic('Coordination');
+      expect(store.get().exercise.topics).toEqual(['Warm-ups', 'Coordination']);
+      expect(document.getElementById('ex-caption')!.textContent).toContain('1/32');
+      expect([...document.querySelectorAll('#ex-topic button[aria-pressed="true"]')]).toHaveLength(2);
+      expect([...document.querySelectorAll<HTMLElement>('#ex-page-chips button')].map((el) => el.dataset.page)).toEqual(['1', '2']);
+      chooseTopic('Warm-ups');
+      expect(store.get().exercise.topics).toEqual(['Coordination']);
+      expect(store.get().exercise.currentId).toBe('0002-1');
+      expect(document.getElementById('ex-caption')!.textContent).toContain('1/16');
+      (document.getElementById('ex-prev') as HTMLButtonElement).click();
+      expect(store.get().exercise.currentId).toBe('0002-16');
+      chooseTopic('Coordination');
+      expect(store.get().exercise.topics).toEqual([]);
+      expect(document.getElementById('ex-caption')!.textContent).toContain('/32');
+    } finally {
+      manifest.pop();
+      delete descriptors['0002.json'];
+    }
+  });
+
+  it('migrates the saved single topic and restores multiple saved topics', () => {
+    const getItem = vi.fn().mockReturnValue(JSON.stringify({ exercise: { topic: 'Warm-ups' } }));
+    vi.stubGlobal('localStorage', { getItem });
+    expect(loadSettings().exercise.topics).toEqual(['Warm-ups']);
+    getItem.mockReturnValue(JSON.stringify({ exercise: { topics: ['Warm-ups', 'Coordination'] } }));
+    expect(loadSettings().exercise.topics).toEqual(['Warm-ups', 'Coordination']);
+  });
+
+  it('topics toggle independently without an All button and only the group uses a select', async () => {
     await mount();
-    const topics = document.querySelectorAll('#ex-topic option');
-    expect([...topics].map((o) => (o as HTMLOptionElement).value)).toEqual(['', 'Warm-ups']);
+    const topics = document.querySelectorAll('#ex-topic button');
+    expect([...topics].map((o) => (o as HTMLButtonElement).dataset.topic)).toEqual(['Warm-ups']);
+    expect([...document.querySelectorAll('#exercise-view select')].map((el) => el.id)).toEqual(['ex-group']);
+    chooseTopic('Warm-ups');
+    expect(topics[0].getAttribute('aria-pressed')).toBe('true');
+    chooseTopic('Warm-ups');
+    expect(topics[0].getAttribute('aria-pressed')).toBe('false');
   });
 
   it('page chips are derived (one per page) — no combobox', async () => {
     const { store } = await mountMultiPage();
     expect(document.querySelector('#ex-page')).toBeNull(); // no <select>
-    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
-    topic.value = 'Warm-ups';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    chooseTopic('Warm-ups');
     const chips = document.querySelectorAll('#ex-page-chips .ex-page-chip');
     expect([...chips].map((c) => (c as HTMLElement).dataset.page)).toEqual(['1', '2']);
     // Nothing selected by default -> every chip is off (= all pages active).
@@ -97,40 +204,33 @@ describe('ExerciseView (jsdom integration)', () => {
   it('the page chips stay hidden for a single-page topic (nothing to choose)', async () => {
     const { store } = await mount();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
-    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
     expect(pageField.hidden).toBe(true);
     // The only topic spans a single page, so the chips have nothing to offer.
-    topic.value = 'Warm-ups';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(store.get().exercise.topic).toBe('Warm-ups');
+    chooseTopic('Warm-ups');
+    expect(store.get().exercise.topics).toEqual(['Warm-ups']);
     expect(pageField.hidden).toBe(true);
   });
 
   it('the page chips show once a topic spans more than one page', async () => {
     const { store } = await mountMultiPage();
     const pageField = document.getElementById('ex-page-field') as HTMLElement;
-    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
     // No topic chosen on load -> no page control.
     expect(pageField.hidden).toBe(true);
     // Selecting the multi-page topic reveals the (topic-filtered) chips.
-    topic.value = 'Warm-ups';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(store.get().exercise.topic).toBe('Warm-ups');
+    chooseTopic('Warm-ups');
+    expect(store.get().exercise.topics).toEqual(['Warm-ups']);
     expect(pageField.hidden).toBe(false);
     const chips = document.querySelectorAll('#ex-page-chips .ex-page-chip');
     expect([...chips].map((c) => (c as HTMLElement).dataset.page)).toEqual(['1', '2']);
     // Clearing the topic hides them again.
-    topic.value = '';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    chooseTopic('Warm-ups');
     expect(pageField.hidden).toBe(true);
   });
 
   it('toggling chips builds the page set; clearing all means "all pages"', async () => {
     const { store } = await mountMultiPage();
-    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
-    topic.value = 'Warm-ups';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    chooseTopic('Warm-ups');
     const chip = (page: string) =>
       document.querySelector(`#ex-page-chips .ex-page-chip[data-page="${page}"]`) as HTMLButtonElement;
 
@@ -195,9 +295,7 @@ describe('ExerciseView (jsdom integration)', () => {
 
   it('keeps the cached preview inside a newly selected page', async () => {
     const { store } = await mountMultiPage();
-    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
-    topic.value = 'Warm-ups';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    chooseTopic('Warm-ups');
     (document.getElementById('ex-auto-toggle') as HTMLButtonElement).click();
 
     const page2 = document.querySelector(
@@ -212,9 +310,8 @@ describe('ExerciseView (jsdom integration)', () => {
 
   it('selects and renders generated three-letter alphabet exercises', async () => {
     const { store } = await mountRhythmicAlphabet();
-    const topic = document.getElementById('ex-topic') as HTMLSelectElement;
-    topic.value = 'Benny Greb alphabet';
-    topic.dispatchEvent(new Event('change', { bubbles: true }));
+    chooseGroup('benny-greb');
+    chooseTopic('Benny Greb alphabet');
 
     expect(store.get().exercise.currentId).toBe('benny-binary-ABCD');
     expect((document.getElementById('ex-img') as HTMLImageElement).src).toMatch(/^data:image\/svg\+xml/);
@@ -251,6 +348,8 @@ describe('ExerciseView (jsdom integration)', () => {
     await view.show();
     expect(store.get().exercise.currentId).toBeNull();
     await view.show();
+    expect(store.get().exercise.currentId).toBeNull();
+    chooseGroup('other');
 
     expect(store.get().exercise.currentId).toBe('0001-1');
     expect(fetchMock).toHaveBeenCalledTimes(3);
