@@ -38,13 +38,61 @@ export interface ControlsCallbacks {
   onVoicePreview: (sound: SoundName) => void;
 }
 
-/**
- * Bind a button that changes a numeric value by clickDelta; also supports up/down
- * drag. Both the tap and the drag stay on the step grid aligned to `base`
- * (…, base − |clickDelta|, base, base + |clickDelta|, …), so a value can never be
- * stranded between steps and become unreachable by the ± buttons.
- */
-export function bindDragBtn(
+/** Vertical scrubbing: each 8px changes the value by exactly one unit. */
+export function bindNumberDrag(
+  el: HTMLElement,
+  getVal: () => number,
+  setVal: (v: number) => void,
+  min: number,
+  max: number,
+): void {
+  let drag: { pointerId: number; y: number; value: number; active: boolean } | null = null;
+  let suppressClick = false;
+  el.classList.add('number-scrubber');
+  el.title = `${el.title ? el.title + '. ' : ''}Drag up/down to adjust by 1`;
+  el.addEventListener('pointerdown', (e) => {
+    if (drag || e.button !== 0) return;
+    if (e.target instanceof Element && e.target.closest('button')) return;
+    e.preventDefault();
+    suppressClick = false;
+    drag = { pointerId: e.pointerId, y: e.clientY, value: getVal(), active: false };
+    el.setPointerCapture?.(e.pointerId);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const steps = Math.trunc((drag.y - e.clientY) / 8);
+    if (!steps) return;
+    drag.active = true;
+    el.classList.add('scrubbing');
+    drag.value = Math.max(min, Math.min(max, drag.value + steps));
+    drag.y = e.clientY;
+    setVal(drag.value);
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    suppressClick = drag.active;
+    drag = null;
+    el.classList.remove('scrubbing');
+    if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId);
+  });
+  const cancel = (e: PointerEvent) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    suppressClick = drag.active;
+    drag = null;
+    el.classList.remove('scrubbing');
+  };
+  el.addEventListener('pointercancel', cancel);
+  el.addEventListener('lostpointercapture', cancel);
+  el.addEventListener('click', (e) => {
+    if (!suppressClick) return;
+    suppressClick = false;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
+}
+
+/** Coarse buttons retain their original step grid. */
+export function bindStepBtn(
   btn: HTMLButtonElement,
   clickDelta: number,
   getVal: () => number,
@@ -53,46 +101,16 @@ export function bindDragBtn(
   max: number,
   base = 0,
 ): void {
-  const DRAG_THRESHOLD = 8; // px before drag mode activates
-  const SENSITIVITY = 0.3; // units per pixel
   const size = Math.abs(clickDelta);
   const phase = ((base % size) + size) % size;
-  const clamp = (v: number): number => Math.max(min, Math.min(max, v));
-  // Nearest slot on the base-aligned grid.
-  const snap = (v: number): number => Math.round((v - phase) / size) * size + phase;
-  let drag: { startY: number; startVal: number } | null = null;
-
-  btn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    drag = { startY: e.clientY, startVal: getVal() };
-    btn.setPointerCapture?.(e.pointerId);
-  });
-
-  btn.addEventListener('pointermove', (e) => {
-    if (!drag) return;
-    const dy = drag.startY - e.clientY; // positive = upward
-    if (Math.abs(dy) >= DRAG_THRESHOLD) {
-      setVal(clamp(snap(drag.startVal + dy * SENSITIVITY)));
-    }
-  });
-
-  btn.addEventListener('pointerup', (e) => {
-    if (!drag) return;
-    const moved = Math.abs(drag.startY - e.clientY) >= DRAG_THRESHOLD;
-    // A tap steps one slot in the pressed direction; this also re-aligns an
-    // off-grid value onto the grid (e.g. 8 → 15, or 8 → 0/min going down).
-    if (!moved) {
-      const k = (getVal() - phase) / size;
-      const next =
-        clickDelta > 0 ? (Math.floor(k) + 1) * size + phase : (Math.ceil(k) - 1) * size + phase;
-      setVal(clamp(next));
-    }
-    drag = null;
-  });
-
-  btn.addEventListener('pointercancel', () => {
-    drag = null;
-  });
+  const tap = () => {
+    const k = (getVal() - phase) / size;
+    const next = clickDelta > 0
+      ? (Math.floor(k) + 1) * size + phase
+      : (Math.ceil(k) - 1) * size + phase;
+    setVal(Math.max(min, Math.min(max, next)));
+  };
+  btn.addEventListener('click', tap);
 }
 
 /** Attach a mouse-wheel handler to a row for non-nullable integer values. */
@@ -151,8 +169,8 @@ function bindStage(
 ): void {
   const p = `t${index}`;
 
-  // every — drag buttons ±15s
-  bindDragBtn(
+  // every — coarse buttons ±15s
+  bindStepBtn(
     byId(`${p}-delta-dec`),
     -15,
     () => getStage().deltaSec,
@@ -161,7 +179,7 @@ function bindStage(
     600,
     DEFAULT_STAGE.deltaSec,
   );
-  bindDragBtn(
+  bindStepBtn(
     byId(`${p}-delta-inc`),
     +15,
     () => getStage().deltaSec,
@@ -186,6 +204,9 @@ function bindStage(
     1,
     60,
   );
+
+  bindNumberDrag(byId(`${p}-max-num`), () => getStage().maxBpm ?? store.get().bpm,
+    (v) => setStage({ maxBpm: v }), BPM_MIN, BPM_MAX);
 
   // up to — ±20, scroll, clear button
   byId(`${p}-max-dec`).addEventListener('click', () => {

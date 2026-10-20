@@ -56,6 +56,7 @@
   --active: #ffffff;
   --trainer: #3fd67f;
   --auto: #c58cff;
+  --scrub: #8399a8;
   --voice-0: #4dd6b8;
   --voice-1: #6b8cff;
   --voice-2: #f4a347;
@@ -573,10 +574,10 @@ body {
   pointer-events: none;
 }
 
-/* Green rim = tempo (matches the metronome's tempo color) — kept thin and airy */
+/* A muted blue disc connects the wheel with the other drag controls. */
 .dial-rim {
-  fill: none;
-  stroke: var(--trainer);
+  fill: color-mix(in srgb, var(--scrub) 18%, transparent);
+  stroke: var(--scrub);
   stroke-width: 2;
   opacity: 0.5;
   pointer-events: none;
@@ -744,9 +745,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  cursor: ns-resize;
   user-select: none;
-  touch-action: none;
 }
 
 .bpm-value {
@@ -996,11 +995,37 @@ body {
   flex-shrink: 0;
 }
 
-/* drag-enabled buttons must block browser touch scroll */
-.trainer-drag-btn {
+/* Muted blue surfaces identify drag controls. */
+.number-scrubber {
+  position: relative;
+  color: var(--scrub);
+  background: color-mix(in srgb, var(--scrub) 9%, transparent);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--scrub) 25%, transparent);
+  padding: 6px 16px;
   touch-action: none;
   user-select: none;
   cursor: ns-resize;
+}
+.number-scrubber:hover,
+.number-scrubber.scrubbing {
+  background: color-mix(in srgb, var(--scrub) 18%, transparent);
+  box-shadow: inset 0 0 0 1px var(--scrub);
+}
+.center.number-scrubber {
+  position: absolute;
+  border-radius: 50%;
+  padding: 0;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+}
+.center.number-scrubber:hover,
+.center.number-scrubber.scrubbing {
+  background: color-mix(in srgb, var(--scrub) 7%, transparent);
+}
+.circle-wrap.gap-active .center.number-scrubber {
+  background: transparent;
 }
 
 .trainer-clear-btn {

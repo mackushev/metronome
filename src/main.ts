@@ -1,6 +1,8 @@
 import { MetronomeEngine } from './audio/engine';
 import { modeFromUrl, pushMode, replaceMode, onPopState } from './router';
 import {
+  BPM_MIN,
+  BPM_MAX,
   clampBpm,
   loadSettings,
   resizeBeatStates,
@@ -19,7 +21,7 @@ import {
 } from './trainer';
 import { BeatBar } from './ui/beatbar';
 import { CircleView } from './ui/circle';
-import { bindControls } from './ui/controls';
+import { bindControls, bindNumberDrag } from './ui/controls';
 import { ExerciseView } from './ui/exercise-view';
 import { StageView } from './ui/stage-view';
 import { applyTheme } from './themes';
@@ -251,27 +253,8 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-// --- Drag on the center: up/down = tempo ---
-let drag: { startY: number; startBpm: number; moved: boolean } | null = null;
-center.addEventListener('pointerdown', (event) => {
-  if (event.target instanceof Element && event.target.closest('#play')) return;
-  drag = { startY: event.clientY, startBpm: store.get().bpm, moved: false };
-  center.setPointerCapture(event.pointerId);
-});
-center.addEventListener('pointermove', (event) => {
-  if (!drag) return;
-  const settingsPopup = document.getElementById('settings-popup');
-  if (settingsPopup && !settingsPopup.hidden) {
-    drag = null;
-    return;
-  }
-  const dy = drag.startY - event.clientY;
-  if (Math.abs(dy) > 3) drag.moved = true;
-  if (drag.moved) setUserBpm(clampBpm(drag.startBpm + dy / 2));
-});
-const endDrag = () => (drag = null);
-center.addEventListener('pointerup', endDrag);
-center.addEventListener('pointercancel', endDrag);
+// --- The central disc supports vertical tempo adjustment ---
+bindNumberDrag(center, () => store.get().bpm, setUserBpm, BPM_MIN, BPM_MAX);
 
 // --- React to settings changes ---
 // Store.update() always spreads to a new settings object; nested slices keep

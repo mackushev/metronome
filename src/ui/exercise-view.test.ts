@@ -174,9 +174,8 @@ describe('ExerciseView (jsdom integration)', () => {
     // Click the header to toggle auto-advance on (restores the last value, default 20s)
     autoToggle.click();
     expect(store.get().exercise.autoSec).toBe(20);
-    // The +15s button raises the interval (pointerdown then pointerup without a drag = click).
-    inc.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientY: 0 }));
-    inc.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientY: 0 }));
+    // The +15s button raises the interval.
+    inc.click();
     expect(store.get().exercise.autoSec).toBe(35);
     // Click again to turn off
     autoToggle.click();

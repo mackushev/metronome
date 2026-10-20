@@ -3,7 +3,7 @@ import { crop, filterItems, pickNext, step } from '../content/navigation';
 import { rhythmicAlphabetImage } from '../content/rhythmic-alphabet';
 import type { ContentImage, ContentModel, Item } from '../content/types';
 import type { ExerciseState, Store } from '../state';
-import { bindDragBtn } from './controls';
+import { bindStepBtn, bindNumberDrag } from './controls';
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -114,10 +114,12 @@ export class ExerciseView {
     });
     // Click the header to toggle auto-advance on/off
     this.autoToggle.addEventListener('click', () => this.toggleAuto());
-    // ±15s drag buttons, mirroring the speed trainer "every" control. The grid is
+    // ±15s buttons, mirroring the speed trainer "every" control. The grid is
     // aligned to the 20s default (…, 5, 20, 35, 50, …) so the steps stay clean.
-    bindDragBtn(byId('ex-delta-dec'), -15, () => this.getSec(), (v) => this.setSec(v), 2, 600, 20);
-    bindDragBtn(byId('ex-delta-inc'), +15, () => this.getSec(), (v) => this.setSec(v), 2, 600, 20);
+    bindStepBtn(byId('ex-delta-dec'), -15, () => this.getSec(), (v) => this.setSec(v), 2, 600, 20);
+    bindStepBtn(byId('ex-delta-inc'), +15, () => this.getSec(), (v) => this.setSec(v), 2, 600, 20);
+
+    bindNumberDrag(this.autoNum, () => this.getSec(), (v) => this.setSec(v), 2, 600);
 
     // Re-frame the current item when the viewport width changes.
     if (typeof ResizeObserver !== 'undefined') {

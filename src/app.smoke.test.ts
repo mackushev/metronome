@@ -281,13 +281,59 @@ describe('smoke: the app mounts', () => {
     const decBtn = document.getElementById('t0-delta-dec') as HTMLButtonElement;
     const num = document.getElementById('t0-delta-num')!;
     // default is 30; tap +15s
-    incBtn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    incBtn.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    incBtn.click();
     expect(num.textContent).toBe('45');
     // tap −15s
-    decBtn.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    decBtn.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+    decBtn.click();
     expect(num.textContent).toBe('30');
+  });
+
+  it('scrubs trainer numbers by one, including unlimited targets and both stages', () => {
+    const move = (el: HTMLElement, type: string, y: number) =>
+      el.dispatchEvent(new MouseEvent(type, { bubbles: true, clientY: y, button: 0 }));
+    for (const stage of ['t0', 't1']) {
+      const max = document.getElementById(`${stage}-max-num`)!;
+      const bpm = Number(document.getElementById('bpm-value')!.textContent);
+      expect(max.textContent).toBe('∞');
+      move(max, 'pointerdown', 100);
+      move(max, 'pointermove', 92);
+      expect(max.textContent).toBe(String(bpm + 1));
+      move(max, 'pointermove', 84);
+      expect(max.textContent).toBe(String(bpm + 2));
+      move(max, 'pointermove', 92);
+      expect(max.textContent).toBe(String(bpm + 1));
+      move(max, 'pointerup', 92);
+      expect(max.classList.contains('scrubbing')).toBe(false);
+      if (stage === 't0') (document.getElementById('trainer-add-stage')! as HTMLButtonElement).click();
+    }
+    (document.getElementById('trainer-remove-stage')! as HTMLButtonElement).click();
+    (document.getElementById('t0-max-clear')! as HTMLButtonElement).click();
+    const every = document.getElementById('t0-delta-num')!;
+    move(every, 'pointerdown', 100);
+    move(every, 'pointermove', 92);
+    expect(every.textContent).toBe('30');
+    move(every, 'pointermove', 100);
+    move(every, 'pointerup', 100);
+    expect(every.textContent).toBe('30');
+  });
+
+  it('uses the same scrub surface for the dial and settings, with coarse buttons excluded', () => {
+    for (const id of ['center', 't0-max-num', 't1-max-num', 'ex-delta-num']) {
+      expect(document.getElementById(id)!.classList.contains('number-scrubber')).toBe(true);
+    }
+    expect(document.querySelector('button.number-scrubber')).toBeNull();
+    for (const id of ['bpm-value', 't0-delta-num', 't0-step-num', 't1-delta-num', 't1-step-num']) {
+      expect(document.getElementById(id)!.classList.contains('number-scrubber')).toBe(false);
+    }
+    const value = document.getElementById('bpm-value')!;
+    const surface = document.getElementById('center')!;
+    const before = Number(value.textContent);
+    surface.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientY: 100 }));
+    surface.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientY: 92 }));
+    expect(value.textContent).toBe(String(before + 1));
+    surface.dispatchEvent(new MouseEvent('pointercancel', { bubbles: true }));
+    surface.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientY: 84 }));
+    expect(value.textContent).toBe(String(before + 1));
   });
 
   it('tapping a subdivision dot mutes only that single ghost click', () => {
